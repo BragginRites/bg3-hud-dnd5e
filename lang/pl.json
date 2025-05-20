@@ -1,0 +1,26 @@
+{
+    "BG3.Settings": {
+        "ShowMaterialDescription": {
+            "Name": "Pokaż opis materialnych komponentów",
+            "Hint": "Wyświetlanie pełnego opisu materialnych komponentów w podpowiedziach zaklęć (np. „diamenty o wartości 300 sz, które wykorzystuje zaklęcie”)."
+        },
+        "EnforceSpellPreparationPC": {
+            "Name": "Wymuszenie przygotowania zaklęć (połączone tokeny)",
+            "Hint": "Gdy opcja ta jest włączona, połączone tokeny (w tym postacie graczy) będą wyświetlać tylko przygotowane zaklęcia i zaklęcia specjalne (wrodzone, na życzenie, pakt, rytuał, zawsze). Po wyłączeniu wyświetlane będą wszystkie zaklęcia."
+        },
+        "EnforceSpellPreparationNPC": {
+            "Name": "Wymuszenie przygotowania zaklęć (niepowiązane tokeny)",
+            "Hint": "Po włączeniu, niepołączone tokeny będą wyświetlać tylko przygotowane zaklęcia i zaklęcia specjalne (wrodzone, na życzenie, pakt, rytuał, zawsze). Gdy opcja ta jest wyłączona, wyświetlane są wszystkie zaklęcia."
+        },
+        "synchroMidiQoL": {
+            "BR": {
+                "Name": "Efekty aktywne bonusów i reakcji",
+                "Hint": "Ustaw akcję i reakcję bonusu zgodnie z aktywnymi efektami MidiQoL."
+            },
+            "ADV": {
+                "Name": "Dodaj przyciski ułatwienia/utrudnienia",
+                "Hint": "Dodaj źródło ułatwienia lub utrudnienia. Wymaga włączenia funkcji szybkiego przewijania MidiQoL."
+            }
+        }
+    }
+} 

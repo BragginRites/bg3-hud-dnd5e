@@ -1,0 +1,31 @@
+{
+    "BG3.Settings": {
+        "ShowMaterialDescription": {
+            "Name": "Show Material Components Description",
+            "Hint": "Display the full description of material components in spell tooltips (e.g. 'diamonds worth 300gp, which the spell consumes')"
+        },
+        "EnforceSpellPreparationPC": {
+            "Name": "Enforce Spell Preparation (Linked Tokens)",
+            "Hint": "When enabled, linked tokens (including player characters) will only show prepared spells and special spells (innate, at-will, pact, ritual, always). When disabled, all spells will appear."
+        },
+        "EnforceSpellPreparationNPC": {
+            "Name": "Enforce Spell Preparation (Unlinked Tokens)",
+            "Hint": "When enabled, unlinked tokens will only show prepared spells and special spells (innate, at-will, pact, ritual, always). When disabled, all spells will appear."
+        },
+        "synchroMidiQoL": {
+            "BR": {
+                "Name": "Bonus & Reaction active effects",
+                "Hint": "Set Bonus Action and Reaction as used based on MidiQoL active effects."
+            },
+            "ADV": {
+                "Name": "Add Advantage/Disadvantage buttons",
+                "Hint": "Add an advantage or disadvantage source. Need MidiQoL fast forward to be enable."
+            }
+        }
+    },
+    "BG3.Hotbar": {
+        "ContextMenu": {
+            "ConfigureActivities": "Configure Activities"
+        }
+    }
+} 

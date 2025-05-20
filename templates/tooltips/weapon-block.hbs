@@ -1,0 +1,45 @@
+<ul class="weapon-block unlist {{#if fullWidth}}full-width{{/if}}">
+    <li>
+        <strong>{{ localize "DND5E.ItemActionType" }}:</strong>
+        <span class="value">{{ labels.activation }}</span>
+    </li>
+    {{#if labels.attacks.length}}
+    <li>
+        <strong>{{ localize "DND5E.Attack" }}:</strong>
+        <span class="value">
+            {{#each labels.attacks as | attack |}}
+                {{ attack.toHit }}
+                {{#unless @last}}|{{/unless}}
+            {{/each}}
+        </span>
+    </li>
+    {{/if}}
+    {{#if enrichDamage}}
+    <li>
+        <strong>{{ localize "DND5E.Damage" }}:</strong>
+        <span class="value">
+            {{{enrichDamage.value}}}
+            {{!-- {{#each labels.damages as | damage |}}
+                [[/damage {{damage.formula}}{{#if damage.damageType}} type={{damage.damageType}}{{/if}}]]
+                {{#unless @last}}|{{/unless}}
+            {{/each}} --}}
+        </span>
+    </li>
+    {{/if}}
+    {{#if labels.reach}}
+        <li>
+            <strong>{{ localize "DND5E.Item.Property.Reach" }}:</strong>
+            <span class="value">{{ labels.reach }}</span>
+        </li>
+    {{/if}}
+    {{#if labels.range}}
+        <li>
+            <strong>{{ localize "DND5E.Range" }}:</strong>
+            <span class="value">{{ labels.range }}</span>
+        </li>
+    {{/if}}
+    {{!-- <li>
+        <strong>{{ localize "DND5E.Price" }}:</strong>
+        <span class="value">{{ price.value }}{{ price.denomination }}</span>
+    </li> --}}
+</ul>

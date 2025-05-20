@@ -1,0 +1,16 @@
+{
+    "BG3.Settings": {
+        "ShowMaterialDescription": {
+            "Name": "Beschrijving van materiële componenten weergeven",
+            "Hint": "Toon de volledige beschrijving van materiële componenten in spreuktooltips (bijv. 'diamanten ter waarde van 300gp, die de spreuk verbruikt')"
+        },
+        "EnforceSpellPreparationPC": {
+            "Name": "Spreukvoorbereiding afdwingen (Gekoppelde tokens)",
+            "Hint": "Indien ingeschakeld, tonen gekoppelde tokens (inclusief spelerpersonages) alleen voorbereide spreuken en speciale spreuken (aangeboren, naar believen, pact, ritueel, altijd). Indien uitgeschakeld, verschijnen alle spreuken."
+        },
+        "EnforceSpellPreparationNPC": {
+            "Name": "Spreukvoorbereiding afdwingen (Niet-gekoppelde tokens)",
+            "Hint": "Indien ingeschakeld, tonen niet-gekoppelde tokens alleen voorbereide spreuken en speciale spreuken (aangeboren, naar believen, pact, ritueel, altijd). Indien uitgeschakeld, verschijnen alle spreuken."
+        }
+    }
+} 

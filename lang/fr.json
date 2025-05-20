@@ -1,0 +1,16 @@
+{
+    "BG3.Settings": {
+        "ShowMaterialDescription": {
+            "Name": "Afficher la description des composants matériels",
+            "Hint": "Afficher la description complète des composants matériels dans les infobulles des sorts (par exemple, 'diamants d'une valeur de 300 po, que le sort consomme')"
+        },
+        "EnforceSpellPreparationPC": {
+            "Name": "Forcer la préparation des sorts (Jetons liés)",
+            "Hint": "Si activé, les jetons liés (y compris les personnages joueurs) n'afficheront que les sorts préparés et les sorts spéciaux (innés, à volonté, pacte, rituel, toujours). Si désactivé, tous les sorts apparaîtront."
+        },
+        "EnforceSpellPreparationNPC": {
+            "Name": "Forcer la préparation des sorts (Jetons non liés)",
+            "Hint": "Si activé, les jetons non liés n'afficheront que les sorts préparés et les sorts spéciaux (innés, à volonté, pacte, rituel, toujours). Si désactivé, tous les sorts apparaîtront."
+        }
+    }
+} 
