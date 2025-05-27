@@ -3,8 +3,8 @@ const MODULE_NAME = "bg3-hud-dnd5e";
 Hooks.on("BG3HotbarInit", async (BG3Hotbar) => {
     const [BG3CONFIG, BG3UTILS] = BG3Hotbar.getConfig();
 
-    BG3UTILS.check2Handed = function(cell) {
-        return !!cell.item?.labels?.properties?.find(p => p.abbr === 'two');
+    BG3UTILS.check2Handed = function(item) {
+        return !!item?.labels?.properties?.find(p => p.abbr === 'two');
     }
 
     BG3UTILS.itemIsPassive = function(item) {
