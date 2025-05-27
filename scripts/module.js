@@ -3,10 +3,6 @@ const MODULE_NAME = "bg3-hud-dnd5e";
 Hooks.on("BG3HotbarInit", async (BG3Hotbar) => {
     const [BG3CONFIG, BG3UTILS] = BG3Hotbar.getConfig();
 
-    BG3CONFIG.COMMON_ACTIONS = {};
-
-    BG3CONFIG.DEFAULT_COMMON_ACTIONS = ["9wbU6kYxfAaRFrbI", "ga6foNaesV3UJFKm", "eqOOv3smPuxTq7Xm", "pmn1iLabeps5aPtW", "nmkcJWUba7hyi5m5", "34jFXjMOseErle3M"];
-
     BG3UTILS.check2Handed = function(cell) {
         return !!cell.item?.labels?.properties?.find(p => p.abbr === 'two');
     }
@@ -14,65 +10,17 @@ Hooks.on("BG3HotbarInit", async (BG3Hotbar) => {
     BG3UTILS.itemIsPassive = function(item) {
         return item.type === "feat" && ((item.system?.activities?.size === 0) || !(item.system?.activation?.type && (item.system?.activation?.type !== "none" && item.system?.activation?.type !== "passive")));
     }
-    
-    game.settings.menus.get(BG3CONFIG.MODULE_NAME + ".chooseCPRActions").visible = () => game.modules.get("chris-premades")?.active;
 
-    const getInitMethod = function() {
-        return this.actor.rollInitiativeDialog.bind(this.actor);
-    }
-
-    const getProfColor = function(proficient) {
-        return proficient === 1 ?  'color: #3498db' : '';
-    }
-
-    const getSaveMod = function(actor, key){
-        const abilityScore = actor.system.abilities?.[key] || { value: 10, proficient: false, save: {value: 0} },
-            mod = abilityScore.save?.value ?? abilityScore.save ?? 0,
-            modString = mod >= 0 ? `+${mod}` : mod.toString();
-        return {value: modString, style: getProfColor(abilityScore.proficient)};
-    }
-
-    const getAbilityMod = function(actor, key) {
-        let mod = 0,
-            modString = '';
-        const abilityScore = actor.system.abilities?.[key] || { value: 10, proficient: false };
-        mod = abilityScore?.mod ?? 0;
-        modString = mod >= 0 ? `+${mod}` : mod.toString();
-        return {value: modString, style: getProfColor(abilityScore?.proficient)};
-    };
-    
-    function skillRoll(event, actor) {
-        event.stopPropagation();
-        const parent = event.target.closest('[data-key]');
-        try {
-            actor.rollSkill({
-                skill: parent.dataset.key,
-                event: event,
-                advantage: event.altKey,
-                disadvantage: event.ctrlKey,
-                fastForward: event.shiftKey
-            });
-        } catch (error) {
-            ui.notifications.error(`Error rolling ${parent.dataset.key.toUpperCase()} save. See console for details.`);
+    class DND5EAbilityContainer extends CONFIG.BG3HUD.COMPONENTS.PORTRAIT.ABILITY {
+        constructor(data) {
+            super(data);
         }
-    };
 
-    const getSkillMod = function(actor, key) {
-        const skills = {};
-        let count = 0;
-        Object.entries(CONFIG.DND5E.skills).forEach(([k, v]) => {
-            if(v.ability !== key) return;
-            count++;
-            const skill = actor.system.skills?.[k] || { proficient: false },
-                mod = skill.total ?? 0,
-                modStr = mod >= 0 ? `+${mod}` : mod.toString();
-            skills[k] = {label:  v.label, icon: 'fas fa-dice-d20', value: modStr, style: getProfColor(skill?.proficient), click: (event) => skillRoll(event, actor)}
-        });
-        return count > 0 ? skills : null;
-    };
+        getInitMethod() {
+            return this.actor.rollInitiativeDialog.bind(this.actor);
+        }
 
-    const getMenuBtns = function() {
-        const saveRoll = (event) => {
+        saveRoll(event) {
             event.stopPropagation();
             const parent = event.target.closest('.ability-container');
             try {
@@ -99,9 +47,9 @@ Hooks.on("BG3HotbarInit", async (BG3Hotbar) => {
             } catch (error) {
                 ui.notifications.error(`Error rolling ${parent.dataset.key.toUpperCase()} save. See console for details.`);
             }
-        };
+        }
 
-        const checkRoll = (event) => {
+        checkRoll(event) {
             event.stopPropagation();
             const parent = event.target.closest('.ability-container');
             try {
@@ -127,571 +75,411 @@ Hooks.on("BG3HotbarInit", async (BG3Hotbar) => {
             } catch (error) {
                 ui.notifications.error(`Error rolling ${parent.dataset.key.toUpperCase()} save. See console for details.`);
             }
+        }
+
+        getProfColor(proficient) {
+            return proficient === 1 ?  'color: #3498db' : '';
+        }
+
+        getSaveMod(key) {
+            const abilityScore = this.actor.system.abilities?.[key] || { value: 10, proficient: false, save: {value: 0} },
+                mod = abilityScore.save?.value ?? abilityScore.save ?? 0,
+                modString = mod >= 0 ? `+${mod}` : mod.toString();
+            return {value: modString, style: this.getProfColor(abilityScore.proficient)};
+        }
+
+        getAbilityMod(key) {
+            let mod = 0,
+                modString = '';
+            const abilityScore = this.actor.system.abilities?.[key] || { value: 10, proficient: false };
+            mod = abilityScore?.mod ?? 0;
+            modString = mod >= 0 ? `+${mod}` : mod.toString();
+            return {value: modString, style: this.getProfColor(abilityScore?.proficient)};
         };
-        const btns = {};
-        for(const abl in CONFIG.DND5E.abilities) {
-            const abilityMod = getAbilityMod(this.actor, abl);
-            btns[abl] = {
-                ...{
-                    label: CONFIG.DND5E.abilities[abl].label,
-                    class: 'ability-container'
+
+        skillRoll(event) {
+            event.stopPropagation();
+            const parent = event.target.closest('[data-key]');
+            try {
+                this.actor.rollSkill({
+                    skill: parent.dataset.key,
+                    event: event,
+                    advantage: event.altKey,
+                    disadvantage: event.ctrlKey,
+                    fastForward: event.shiftKey
+                });
+            } catch (error) {
+                ui.notifications.error(`Error rolling ${parent.dataset.key.toUpperCase()} save. See console for details.`);
+            }
+        };
+
+        getSkillMod(key) {
+            const skills = {};
+            let count = 0;
+            Object.entries(CONFIG.DND5E.skills).forEach(([k, v]) => {
+                if(v.ability !== key) return;
+                count++;
+                const skill = this.actor.system.skills?.[k] || { proficient: false },
+                    mod = skill.total ?? 0,
+                    modStr = mod >= 0 ? `+${mod}` : mod.toString();
+                skills[k] = {label:  v.label, icon: 'fas fa-dice-d20', value: modStr, style: this.getProfColor(skill?.proficient), click: this.skillRoll}
+            });
+            return count > 0 ? skills : null;
+        };
+
+        getMenuBtns() {
+            const btns = {};
+            for(const abl in CONFIG.DND5E.abilities) {
+                const abilityMod = this.getAbilityMod(abl);
+                btns[abl] = {
+                    ...{
+                        label: CONFIG.DND5E.abilities[abl].label,
+                        class: 'ability-container'
+                    },
+                    ...abilityMod,
+                    subMenu: [
+                        {
+                            position: 'topright', name: 'saveMenu', event: 'click', 
+                            buttons: {
+                                [`check${abl.toUpperCase()}`]: {...{label: 'Check', icon: 'fas fa-dice-d20', click: this.checkRoll}, ...abilityMod},
+                                [`save${abl.toUpperCase()}`]: {...{label: 'Save', icon: 'fas fa-dice-d20', click: this.saveRoll}, ...this.getSaveMod(abl)}
+                            }
+                        },
+                        {
+                            position: 'topleft', name: 'skillMenu', event: 'click',
+                            buttons: this.getSkillMod(abl)
+                        }
+                    ]
+                }
+            };
+            return btns;
+        }
+    }
+
+    class DND5EDeathSavesContainer extends CONFIG.BG3HUD.COMPONENTS.PORTRAIT.DEATH {
+        constructor(data) {
+            super(data);
+        }
+
+        getData() {
+            return {
+                display: game.settings.get(BG3CONFIG.MODULE_NAME, 'showDeathSavingThrow'), 
+                data1: {
+                    value: this.actor.system.attributes.death.success ?? 0,
+                    max: 3,
+                    update: async (value) => {
+                        await this.actor.update({
+                            'system.attributes.death.success': value
+                        });
+                    }
                 },
-                ...abilityMod,
-                subMenu: [
+                data2: {
+                    value: this.actor.system.attributes.death.failure ?? 0,
+                    max: 3,
+                    update: async (value) => {
+                        await this.actor.update({
+                            'system.attributes.death.failure': value
+                        });
+                    }
+                }
+            };
+        }
+
+        isVisible() {
+            if (!this.actor || this.actor.type !== 'character' || game.settings.get(BG3CONFIG.MODULE_NAME, 'showDeathSavingThrow') === 'hide') return false;
+            // Get current HP and death saves state
+            const currentHP = this.actor.system.attributes?.hp?.value || 0;
+
+            return currentHP <= 0;
+        }
+
+        async skullClick(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            // Get current death save count before the roll
+            const currentSuccesses = this.actor.system.attributes.death.success || 0;
+
+            try {
+                // Determine roll mode based on modifiers
+                let rollMode = "roll";
+                if (event.altKey) rollMode = "advantage";
+                if (event.ctrlKey) rollMode = "disadvantage";
+                if (event.shiftKey) rollMode = "gmroll";
+
+                // Roll the death save with the appropriate mode
+                const roll = await this.actor.rollDeathSave({
+                    event: event,  // Pass the original event
+                    advantage: event.altKey,
+                    disadvantage: event.ctrlKey,
+                    fastForward: event.shiftKey
+                });
+                
+                if(!roll) return;
+                this.setVisibility();
+            } catch (error) {
+                console.error("Error during death save roll:", error);
+            }
+        }
+    }
+
+    class DND5ERestTurnContainer extends CONFIG.BG3HUD.COMPONENTS.RESTTURN {
+        constructor(data) {
+            super(data);
+        }
+
+        async getRestBtns() {
+            const btnData = [];
+            if(this.actor) {
+                btnData.push(
                     {
-                        position: 'topright', name: 'saveMenu', event: 'click', 
-                        buttons: {
-                            [`check${abl.toUpperCase()}`]: {...{label: 'Check', icon: 'fas fa-dice-d20', click: checkRoll}, ...abilityMod},
-                            [`save${abl.toUpperCase()}`]: {...{label: 'Save', icon: 'fas fa-dice-d20', click: saveRoll}, ...getSaveMod(this.actor, abl)}
+                        type: 'div',
+                        class: ["rest-turn-button"],
+                        label: 'Short Rest',
+                        icon: "fa-campfire",
+                        visible: () => !game.combat?.started,
+                        events: {
+                            'click': this.actor.shortRest.bind(this.actor)
                         }
                     },
                     {
-                        position: 'topleft', name: 'skillMenu', event: 'click',
-                        buttons: getSkillMod(this.actor, abl)
+                        type: 'div',
+                        class: ["rest-turn-button"],
+                        label: 'Long Rest',
+                        icon: "fa-tent",
+                        visible: () => !game.combat?.started,
+                        events: {
+                            'click': this.actor.longRest.bind(this.actor)
+                        }
                     }
-                ]
-            }
-        };
-        return btns;
+                )
+            };
+            return btnData;
+        }
     }
 
-    const getRestBtns = async function() {
-        const btnData = [];
-        if(this.actor) {
-            btnData.push(
+    class DND5EAdvContainer extends CONFIG.BG3HUD.COMPONENTS.ADVANTAGE {
+        constructor(data) {
+            super(data);
+        }
+
+        isVisible() {
+            console.log('DND5E: isVisible')
+            return game.modules.get("midi-qol")?.active && game.settings.get(MODULE_NAME, 'addAdvBtnsMidiQoL');
+        }
+        
+        getBtnData() {
+            return [
                 {
                     type: 'div',
-                    class: ["rest-turn-button"],
-                    label: 'Short Rest',
-                    icon: "fa-campfire",
-                    visible: () => !game.combat?.started,
+                    key: 'advBtn',
+                    title: 'Left-click to set Advantage to roll once.<br>Right-click to toggle.',
+                    label: 'ADV',
                     events: {
-                        'click': this.actor.shortRest.bind(this.actor)
+                        'mouseup': this.setState.bind(this),
                     }
                 },
                 {
                     type: 'div',
-                    class: ["rest-turn-button"],
-                    label: 'Long Rest',
-                    icon: "fa-tent",
-                    visible: () => !game.combat?.started,
+                    key: 'disBtn',
+                    title: 'Left-click to set Disadvantage to roll once.<br>Right-click to toggle.',
+                    label: 'DIS',
                     events: {
-                        'click': this.actor.longRest.bind(this.actor)
+                        'mouseup': this.setState.bind(this),
                     }
                 }
-            )
-        };
-        return btnData;
+            ];
+        }
     }
 
-    const getDataDSC = function() {
-        return {
-            display: game.settings.get(BG3CONFIG.MODULE_NAME, 'showDeathSavingThrow'), 
-            data1: {
-                value: this.actor.system.attributes.death.success ?? 0,
-                max: 3,
-                update: async (value) => {
-                    await this.actor.update({
-                        'system.attributes.death.success': value
-                    });
+    class DND5EFilterContainer extends CONFIG.BG3HUD.COMPONENTS.HOTBAR.FILTER {
+        constructor(data) {
+            super(data);
+        }
+
+        get filterData() {
+            const filterData = [
+                {
+                    id: 'action',
+                    label: 'Action',
+                    symbol: 'fa-circle',
+                    class: ['action-type-button'],
+                    color: BG3CONFIG.COLORS.ACTION
+                },
+                {
+                    id: 'bonus',
+                    label: 'Bonus Action',
+                    symbol: 'fa-triangle',
+                    class: ['action-type-button'],
+                    color: BG3CONFIG.COLORS.BONUS
+                },
+                {
+                    id: 'reaction',
+                    label: 'Reaction',
+                    symbol: 'fa-sparkle',
+                    class: ['action-type-button'],
+                    color: BG3CONFIG.COLORS.REACTION
+                },
+                {
+                    id: 'feature',
+                    label: 'Feature',
+                    symbol: 'fa-star',
+                    class: ['action-type-button'],
+                    color: BG3CONFIG.COLORS.FEATURE_HIGHLIGHT
                 }
-            },
-            data2: {
-                value: this.actor.system.attributes.death.failure ?? 0,
-                max: 3,
-                update: async (value) => {
-                    await this.actor.update({
-                        'system.attributes.death.failure': value
-                    });
-                }
-            }
-        };
-    }
+            ]
 
-    const isVisibleDSC = function() {
-        if (!this.actor || this.actor.type !== 'character' || game.settings.get(BG3CONFIG.MODULE_NAME, 'showDeathSavingThrow') === 'hide') return false;
-        // Get current HP and death saves state
-        const currentHP = this.actor.system.attributes?.hp?.value || 0;
-
-        return currentHP <= 0
-    }
-
-    const skullClickDSC = async function(event) {
-        event.preventDefault();
-        event.stopPropagation();
-        // Get current death save count before the roll
-        const currentSuccesses = this.actor.system.attributes.death.success || 0;
-
-        try {
-            // Determine roll mode based on modifiers
-            let rollMode = "roll";
-            if (event.altKey) rollMode = "advantage";
-            if (event.ctrlKey) rollMode = "disadvantage";
-            if (event.shiftKey) rollMode = "gmroll";
-
-            // Roll the death save with the appropriate mode
-            const roll = await this.actor.rollDeathSave({
-                event: event,  // Pass the original event
-                advantage: event.altKey,
-                disadvantage: event.ctrlKey,
-                fastForward: event.shiftKey
+            // Add cantrip spell
+            let cantrips = this.actor.items.filter(i => i.type==="spell" && i.system.level===0)
+            if(cantrips.length) {
+            filterData.push({
+                id: 'spell',
+                label: 'Cantrip',
+                level: 0,
+                max: 1,
+                value: 1,
+                class: ['spell-level-button', 'spell-cantrip-box'],
+                color: BG3CONFIG.COLORS.SPELL_SLOT
             });
-            
-            if(!roll) return;
-            this.setVisibility();
-        } catch (error) {
-            console.error("Error during death save roll:", error);
-        }
-    }
-
-    const getFilterData = function() {
-        const filterData = [
-            {
-                id: 'action',
-                label: 'Action',
-                symbol: 'fa-circle',
-                class: ['action-type-button'],
-                color: BG3CONFIG.COLORS.ACTION
-            },
-            {
-                id: 'bonus',
-                label: 'Bonus Action',
-                symbol: 'fa-triangle',
-                class: ['action-type-button'],
-                color: BG3CONFIG.COLORS.BONUS
-            },
-            {
-                id: 'reaction',
-                label: 'Reaction',
-                symbol: 'fa-sparkle',
-                class: ['action-type-button'],
-                color: BG3CONFIG.COLORS.REACTION
-            },
-            {
-                id: 'feature',
-                label: 'Feature',
-                symbol: 'fa-star',
-                class: ['action-type-button'],
-                color: BG3CONFIG.COLORS.FEATURE_HIGHLIGHT
             }
-        ]
 
-        // Add cantrip spell
-        let cantrips = this.actor.items.filter(i => i.type==="spell" && i.system.level===0)
-        if(cantrips.length) {
-          filterData.push({
-              id: 'spell',
-              label: 'Cantrip',
-              level: 0,
-              max: 1,
-              value: 1,
-              class: ['spell-level-button', 'spell-cantrip-box'],
-              color: BG3CONFIG.COLORS.SPELL_SLOT
-          });
-        }
+            // Then add regular spell levels
+            for (let level = 1; level <= 9; level++) {
+                const spellLevelKey = `spell${level}`;
+                const spellLevel = this.actor.system.spells?.[spellLevelKey];
+                
+                if (spellLevel?.max > 0) {
+                    filterData.push({
+                        id: 'spell',
+                        label: 'Spell Level',
+                        level: level,
+                        value: spellLevel.value,
+                        max: spellLevel.max,
+                        short: this._getRomanNumeral(level),
+                        class: ['spell-level-button'],
+                        color: BG3CONFIG.COLORS.SPELL_SLOT
+                    });
+                }
+            }
 
-        // Then add regular spell levels
-        for (let level = 1; level <= 9; level++) {
-            const spellLevelKey = `spell${level}`;
-            const spellLevel = this.actor.system.spells?.[spellLevelKey];
-            
-            if (spellLevel?.max > 0) {
+            // Add pact magic if it exists
+            const pactMagic = this.actor.system.spells?.pact;
+            if (pactMagic?.max > 0) {
                 filterData.push({
                     id: 'spell',
-                    label: 'Spell Level',
-                    level: level,
-                    value: spellLevel.value,
-                    max: spellLevel.max,
-                    short: this._getRomanNumeral(level),
-                    class: ['spell-level-button'],
-                    color: BG3CONFIG.COLORS.SPELL_SLOT
+                    // isPact: true,
+                    preparationMode: 'pact',
+                    label: 'Pact Magic',
+                    short: 'P',
+                    max: pactMagic.max,
+                    value: pactMagic.value,
+                    class: ['spell-level-button', 'spell-pact-box'],
+                    color: BG3CONFIG.COLORS.PACT_MAGIC
                 });
             }
+
+            // Add apothecary magic from SCGD if it exists
+            const apothecaryMagic = this.actor.system.spells?.apothecary;
+            if (apothecaryMagic?.max > 0) {
+                filterData.push({
+                    id: 'spell',
+                    // isApothecary: true,
+                    preparationMode: 'apothecary',
+                    label: 'Apothecary Magic',
+                    short: 'A',
+                    max: apothecaryMagic.max,
+                    value: apothecaryMagic.value,
+                    class: ['spell-level-button', 'spell-apothecary-box'],
+                    color: BG3CONFIG.COLORS.APOTHECARY_MAGIC
+                });
+            }
+
+            return filterData;
         }
 
-        // Add pact magic if it exists
-        const pactMagic = this.actor.system.spells?.pact;
-        if (pactMagic?.max > 0) {
-            filterData.push({
-                id: 'spell',
-                // isPact: true,
-                preparationMode: 'pact',
-                label: 'Pact Magic',
-                short: 'P',
-                max: pactMagic.max,
-                value: pactMagic.value,
-                class: ['spell-level-button', 'spell-pact-box'],
-                color: BG3CONFIG.COLORS.PACT_MAGIC
-            });
+        _autoCheckUsed() {
+            // effect._id === "dnd5ebonusaction"
+            // effect._id === "dnd5ereaction000"
+            if(!game.settings.settings.get(MODULE_NAME + '.synchroBRMidiQoL') || !game.settings.get(MODULE_NAME,'synchroBRMidiQoL') || !ui.BG3HOTBAR.components.container.components.activeContainer) return;
+
+            const bonusFilter = this.components.find(f => f.data.id === 'bonus'),
+                reactionFilter = this.components.find(f => f.data.id === 'reaction');
+
+            if((ui.BG3HOTBAR.components.container.components.activeContainer.activesList.find(a => a._id === 'dnd5ebonusaction') && !this.used.includes(bonusFilter)) || (!ui.BG3HOTBAR.components.container.components.activeContainer.activesList.find(a => a._id === 'dnd5ebonusaction') && this.used.includes(bonusFilter))) this.used = bonusFilter;
+
+            if((ui.BG3HOTBAR.components.container.components.activeContainer.activesList.find(a => a._id === 'dnd5ereaction000') && !this.used.includes(reactionFilter)) || (!ui.BG3HOTBAR.components.container.components.activeContainer.activesList.find(a => a._id === 'dnd5ereaction000') && this.used.includes(reactionFilter))) this.used = reactionFilter;
+        }
+    }
+
+    class DND5EWeaponContainer extends CONFIG.BG3HUD.COMPONENTS.WEAPON {
+        constructor(data) {
+            super(data);
         }
 
-        // Add apothecary magic from SCGD if it exists
-        const apothecaryMagic = this.actor.system.spells?.apothecary;
-        if (apothecaryMagic?.max > 0) {
-            filterData.push({
-                id: 'spell',
-                // isApothecary: true,
-                preparationMode: 'apothecary',
-                label: 'Apothecary Magic',
-                short: 'A',
-                max: apothecaryMagic.max,
-                value: apothecaryMagic.value,
-                class: ['spell-level-button', 'spell-apothecary-box'],
-                color: BG3CONFIG.COLORS.APOTHECARY_MAGIC
-            });
-        }
-
-        return filterData;
-    }
-
-    const _autoCheckUsed = function() {        
-        // effect._id === "dnd5ebonusaction"
-        // effect._id === "dnd5ereaction000"
-        if(!game.settings.settings.get(MODULE_NAME + '.synchroBRMidiQoL') || !game.settings.get(MODULE_NAME,'synchroBRMidiQoL') || !ui.BG3HOTBAR.components.container.components.activeContainer) return;
-
-        const bonusFilter = this.components.find(f => f.data.id === 'bonus'),
-            reactionFilter = this.components.find(f => f.data.id === 'reaction');
-
-        if((ui.BG3HOTBAR.components.container.components.activeContainer.activesList.find(a => a._id === 'dnd5ebonusaction') && !this.used.includes(bonusFilter)) || (!ui.BG3HOTBAR.components.container.components.activeContainer.activesList.find(a => a._id === 'dnd5ebonusaction') && this.used.includes(bonusFilter))) this.used = bonusFilter;
-
-        if((ui.BG3HOTBAR.components.container.components.activeContainer.activesList.find(a => a._id === 'dnd5ereaction000') && !this.used.includes(reactionFilter)) || (!ui.BG3HOTBAR.components.container.components.activeContainer.activesList.find(a => a._id === 'dnd5ereaction000') && this.used.includes(reactionFilter))) this.used = reactionFilter;
-    }
-
-    const checkExtraConditions = function(item, actor, manager) {
-        let isValid = true;
-        if(!game.settings.get(BG3CONFIG.MODULE_NAME, 'noActivityAutoPopulate') && BG3UTILS.itemIsPassive(item)) isValid = false;
-        if (item.type === "spell" && (shouldEnforceSpellPreparation(actor, manager.currentTokenId) && !checkPreparedSpell(item))) isValid = false;
-        return isValid;
-    }
-
-    function checkPreparedSpell(item) {
-        const prep = item.system?.preparation;
-        // Skip if it's an unprepared "prepared" spell
-        if (!prep?.prepared && prep?.mode === "prepared") return false;
-        // Include if it's prepared or has a valid casting mode
-        if (!prep?.prepared && !["pact", "apothecary", "atwill", "innate", "ritual", "always"].includes(prep?.mode)) return false;
-        return true;
-    }
-
-    function shouldEnforceSpellPreparation(actor, tokenId) {
-        const isLinked = BG3UTILS.isTokenLinked(actor, tokenId);
-    
-        // If linked token (including PCs) - use PC setting
-        if (isLinked) return game.settings.get(MODULE_NAME, 'enforceSpellPreparationPC');
-        
-        // If unlinked token - use NPC setting
-        return game.settings.get(MODULE_NAME, 'enforceSpellPreparationNPC');
-    }
-
-    const getItemsList = function(actor, itemTypes, manager) {
-        return actor.items.filter(i => itemTypes.includes(i.type) && this.checkExtraConditions(i, actor, manager));
-    }
-
-    const constructItemData = function(item) {
-        return {uuid: item.uuid};
-    }
-
-    const _getCombatActionsList = async function(actor) {
-        let ids = [];
-        if(game.modules.get("chris-premades")?.active && game.packs.get("chris-premades.CPRActions")?.index?.size) {
-            const pack = game.packs.get("chris-premades.CPRActions"),
-                promises = [];
-            for(const id of game.settings.get(BG3CONFIG.MODULE_NAME, 'choosenCPRActions')) {
-                const item = actor.items.find(i => i.system.identifier === pack.index.get(id)?.system?.identifier);
-                if(item) ids.push(item.uuid);
-                else {
-                    const cprItem = pack.index.get(id);
-                    if(cprItem) {
-                        promises.push(new Promise(async (resolve, reject) => {
-                            let item = await pack.getDocument(cprItem._id);
-                            resolve(item);
-                        }))
-                    }
+        async autoEquipWeapons(c) {
+            const weaponsList = this.actor.items.filter(w => w.type == 'weapon'),
+                compareOld = c.index === this.activeSet ? c.oldWeapons : this.components.weapon[this.activeSet].data.items;
+            let toUpdate = [];
+            weaponsList.forEach(w => {
+                if(w.system.equipped && !Object.values(c.data.items).find(wc => wc?.uuid && w.id === wc.uuid.split('.').pop())) {
+                    toUpdate.push({_id: w.id, "system.equipped": 0});
+                } else if(!w.system.equipped && Object.values(c.data.items).find(wc => wc?.uuid && w.id === wc.uuid.split('.').pop())) {
+                    toUpdate.push({_id: w.id, "system.equipped": 1});
                 }
-            }
-            if(promises.length) {
-                await Promise.all(promises).then(async (values) => {
-                    let tmpDoc = await actor.createEmbeddedDocuments('Item', values);
-                    ids = tmpDoc.map(i => i.uuid);
-                })
-            }
-        } else {
-            const compendium = await game.packs.get("bg3-hud-dnd5e.bg3-inspired-hud");
-            if(!compendium) return ids;
-            ids = compendium.folders.find(f => f.name === 'Common Actions').contents.map(m => m.uuid);
-        }
-        return ids;
-    }
-
-    const _populateWeaponsToken = async function(actor, manager) {
-        if (!actor?.items || !manager?.containers?.weapon) return;
-        try {
-            // Process each container
-            let weaponsList = actor.items.filter(w => w.type == 'weapon'),
-            toUpdate = [];
-            if(weaponsList.length) {
-                for(let i = 0; i < weaponsList.length; i++) {
-                    const gridKey = `0-0`,
-                    item = weaponsList[i];
-                    if(i < 3) {
-                    manager.containers.weapon[i].items = {};
-                    const itemData = {uuid: item.uuid};
-                    manager.containers.weapon[i].items[gridKey] = itemData;
-                    }
-                    if((i === 0 && !item.system.equipped) || (i > 0 && item.system.equipped)) toUpdate.push({_id: item.uuid.split('.').pop(), "system.equipped": (i === 0 ? 1 : 0)})
-                }
-                if(game.settings.get(BG3CONFIG.MODULE_NAME, 'enableWeaponAutoEquip')) actor.updateEmbeddedDocuments("Item", toUpdate);
-            }     
-        } catch (error) {
-            console.error("BG3 Inspired Hotbar | Error auto-populating weapons token hotbar:", error);
-        }
-    }
-
-    const autoEquipWeapons = async function(c) {
-        const weaponsList = this.actor.items.filter(w => w.type == 'weapon'),
-            compareOld = c.index === this.activeSet ? c.oldWeapons : this.components.weapon[this.activeSet].data.items;
-        let toUpdate = [];
-        weaponsList.forEach(w => {
-            if(w.system.equipped && !Object.values(c.data.items).find(wc => wc?.uuid && w.id === wc.uuid.split('.').pop())) {
-                toUpdate.push({_id: w.id, "system.equipped": 0});
-            } else if(!w.system.equipped && Object.values(c.data.items).find(wc => wc?.uuid && w.id === wc.uuid.split('.').pop())) {
-                toUpdate.push({_id: w.id, "system.equipped": 1});
-            }
-        });
-        Object.values(c.data.items).forEach(nw => {
-            if(!nw?.uuid) return;
-            const itemId = nw.uuid.split('.').pop(),
-                item = this.actor.items.get(itemId);
-            if(item && item.type !== 'weapon' && !item.system.equipped) toUpdate.push({_id: itemId, "system.equipped": 1});
-        });
-        if(compareOld) {
-            Object.values(compareOld).forEach(ow => {
-                if(!ow?.uuid) return;
-                const itemId = ow.uuid.split('.').pop(),
+            });
+            Object.values(c.data.items).forEach(nw => {
+                if(!nw?.uuid) return;
+                const itemId = nw.uuid.split('.').pop(),
                     item = this.actor.items.get(itemId);
-                if(item && item.type !== 'weapon' && item.system.equipped && !Object.values(c.data.items).find(w => w.uuid === ow.uuid)) toUpdate.push({_id: itemId, "system.equipped": 0});
+                if(item && item.type !== 'weapon' && !item.system.equipped) toUpdate.push({_id: itemId, "system.equipped": 1});
             });
-        }
-        
-        // Update active set & equipped items
-        c.oldWeapons = foundry.utils.deepClone(c.data.items);
-        if(toUpdate.length) {
-            for(const update of toUpdate) {
-                const item = this.actor.items.get(update._id);
-                if(item) item.updateSource({"system.equipped": update["system.equipped"]})
+            if(compareOld) {
+                Object.values(compareOld).forEach(ow => {
+                    if(!ow?.uuid) return;
+                    const itemId = ow.uuid.split('.').pop(),
+                        item = this.actor.items.get(itemId);
+                    if(item && item.type !== 'weapon' && item.system.equipped && !Object.values(c.data.items).find(w => w.uuid === ow.uuid)) toUpdate.push({_id: itemId, "system.equipped": 0});
+                });
+            }
+            
+            // Update active set & equipped items
+            c.oldWeapons = foundry.utils.deepClone(c.data.items);
+            if(toUpdate.length) {
+                for(const update of toUpdate) {
+                    const item = this.actor.items.get(update._id);
+                    if(item) item.updateSource({"system.equipped": update["system.equipped"]})
+                }
             }
         }
     }
 
-    const getActionType = function(itemData) {
-        return itemData.system?.activation?.type?.toLowerCase() ?? itemData.activation?.type?.toLowerCase() ?? null;
-    }
-
-    const getPreparationMode = function(itemData) {
-        return itemData.system?.preparation?.mode ?? null;
-    }
-
-    const useItem = async function(item, e, override) {
-        let used = false,
-            options = {};
-        if(item.execute) item.execute();
-        else if(item.use) {
-            options = {
-                configureDialog: false,
-                legacy: false,
-                event: e
-            };
-            if (e.ctrlKey) options.disadvantage = true;
-            if (e.altKey) options.advantage = true;
-            used = await item.use(options, { event: e });
-        } else if(item.consume) {
-            item.consume(e);
-            if(item.toChat) item.toChat(e);
-            used = await this.useItem(item, this.data.override.level ?? item.system.level);
-        } else if(item.sheet?.render) item.sheet.render(true);
-        else item.toChat(e);
-        return used;
-    }
-
-    const getDataGC = async function() {
-        let itemData = await this.item,
-            data = {};
-        if(itemData) {
-            data = {...data, ...{
-                    uuid: itemData.uuid,
-                    name: itemData.name,
-                    icon: itemData.img ?? 'icons/svg/book.svg',
-                    actionType: this.getActionType(itemData),
-                    itemType: itemData.type,
-                    quantity: itemData.system?.quantity && itemData.system?.quantity > 1 ? itemData.system?.quantity : false
-                },
-                ...await this.getItemUses()
-            };
-            if(itemData.type === "spell") data = {...data, ...{preparationMode: this.getPreparationMode(itemData), level: itemData.system?.level}};
-            if(itemData.type === 'feat') data = {...data, ...{featType: itemData.system?.type?.value || 'default'}};
+    class DND5ECPRActionsDialog extends CONFIG.BG3HUD.DIALOGS.CPR {
+        constructor () {
+            super();
         }
-        return data;
-    }
 
-    const getItemMenuBtns = async function() {
-        return this.data.item ? {activity: {
-            label: game.i18n.localize("BG3.Hotbar.ContextMenu.ConfigureActivities"),
-            icon: 'fas fa-cog',
-            visibility: !this.data.item,
-            click: () => {
-                if(!this.data.item) return;
-                this.menuItemAction('activity');
-            }
-        }} : {};
-    }
-
-    const getItemUses = async function() {
-        const itemData = await this.item;
-        if (itemData.hasLimitedUses && (game.user.isGM || !itemData.system.hasOwnProperty('identified') || itemData.system.identified)) {
-            const uses = itemData.system.uses;
-            const value = uses.value ?? 0;
-            const max = uses.max ?? 0;
-
-            // Only show uses if max > 0.
-            if (max > 0) return {uses: {value: value, max: max}};
-            else return null;
-        }
-        //  else if(itemData.quantity) return {uses: {value: itemData.quantity}};
-        return null;
-    }
-
-    const getDataCPR = async function() {
-        const cprs = game.packs.get("chris-premades.CPRActions");
-        return {actions: cprs.index, selected: game.settings.get(BG3CONFIG.MODULE_NAME, 'choosenCPRActions').filter(i => cprs.index.get(i))};
-    }
-
-    const isVisibleAC = function() {
-        return game.modules.get("midi-qol")?.active && game.settings.get(MODULE_NAME, 'addAdvBtnsMidiQoL');
-    }
-
-    const getBtnDataAC = function() {
-        return [
-            {
-                type: 'div',
-                key: 'advBtn',
-                title: 'Left-click to set Advantage to roll once.<br>Right-click to toggle.',
-                label: 'ADV',
-                events: {
-                    'mouseup': this.setState.bind(this),
-                }
-            },
-            {
-                type: 'div',
-                key: 'disBtn',
-                title: 'Left-click to set Disadvantage to roll once.<br>Right-click to toggle.',
-                label: 'DIS',
-                events: {
-                    'mouseup': this.setState.bind(this),
-                }
-            }
-        ];
-    }
-
-    const _saveEnrichers = function() {
-        const stringNames = [
-            "attack", "award", "check", "concentration", "damage", "heal", "healing", "item", "save", "skill", "tool"
-        ],
-        pattern = new RegExp(`\\[\\[/(?<type>${stringNames.join("|")})(?<config> .*?)?]](?!])(?:{(?<label>[^}]+)})?`, "gi");
-        const enricher = this.enrichers.find(e => e.pattern.toString() == pattern.toString());
-        if(enricher) this.savedEnrichers.damage = enricher.enricher;
-    }
-
-    const _tooltipRangeDamage = function() {
-        const stringNames = [
-            "attack", "award", "check", "concentration", "damage", "heal", "healing", "item", "save", "skill", "tool"
-        ],
-        pattern = new RegExp(`\\[\\[/(?<type>${stringNames.join("|")})(?<config> .*?)?]](?!])(?:{(?<label>[^}]+)})?`, "gi"),
-        damageEnricher = this.enrichers.find(e => e.pattern.toString() == pattern.toString());
-        if(damageEnricher) {
-            const prevEnricher = damageEnricher.enricher;
-            damageEnricher.id = 'damageEnricher';
-            damageEnricher.enricher = async function(match, options) {
-                const formatted = await prevEnricher(match, options);
-                let { type, config, label } = match.groups;
-                if(['damage', 'heal', 'healing'].includes(type)) {
-                    const rollLink = formatted.querySelector('.roll-link');
-                    if(rollLink) {
-                        if(formatted.dataset.formulas) rollLink.innerHTML = rollLink.innerHTML.replace(formatted.dataset.formulas, await BG3UTILS.damageToRange(formatted.dataset.formulas));
-                    }
-                    /* if(formatted) {
-                        if(formatted.dataset.damageTypes) formatted.innerHTML = formatted.innerHTML.replace(BG3UTILS.firstUpper(formatted.dataset.damageTypes), `<i class="fas ${BG3UTILS.getDamageIcon(formatted.dataset.damageTypes)}"></i>`);
-                    } */
-                }
-                return formatted;
-            }
+        async getData() {
+            const cprs = game.packs.get("chris-premades.CPRActions");
+            return {actions: cprs.index, selected: game.settings.get(BG3CONFIG.MODULE_NAME, 'choosenCPRActions').filter(i => cprs.index.get(i))};
         }
     }
+    
+    class DND5EBG3TooltipManager extends CONFIG.BG3HUD.MANAGERS.TOOLTIP {
+        constructor() {
+            super();
+        }
 
-    const extendTooltipInit = function() {
-        BG3UTILS.patchFunc("game.dnd5e.dataModels.ItemDataModel.prototype.getCardData", async function (wrapped, { activity, ...enrichmentOptions }={}) {
-            const context = await wrapped.call(this);
-            if(context.labels?.damages?.length) {
-                let textDamage = '';
-                const rollData = (activity ?? this.parent).getRollData();
-                for(let i = 0; i < context.labels.damages.length; i++) {
-                    // [[/damage {{damage.formula}}{{#if damage.damageType}} type={{damage.damageType}}{{/if}}]]
-                    textDamage += `[[/damage ${context.labels.damages[i].formula}${context.labels.damages[i].damageType ? ` type=${context.labels.damages[i].damageType}` : ''}]]`;
-                    if(i < context.labels.damages.length - 1) textDamage += ' | ';
-                }
-                context.enrichDamage = {
-                    value: await TextEditor.enrichHTML(textDamage ?? "", {
-                        rollData, relativeTo: this.parent, ...enrichmentOptions
-                    })
-                }
-            }
-            if(!this.hasOwnProperty('identified') && this.hasLimitedUses) context.uses = this.uses;
-            return context;
-        }, "MIXED");
-        game.dnd5e.dataModels.ItemDataModel.ITEM_TOOLTIP_TEMPLATE = `modules/${MODULE_NAME}/templates/tooltips/item-tooltip.hbs`;
-        if(game.settings.get(BG3CONFIG.MODULE_NAME, 'showDamageRanges')) this._tooltipRangeDamage();
-        // Add Tooltip to Activity
-        if(game.dnd5e.dataModels.activity) {
-            game.dnd5e.dataModels.activity.BaseActivityData.ACTIVITY_TOOLTIP_TEMPLATE = `modules/${MODULE_NAME}/templates/tooltips/activity-tooltip.hbs`;
-            game.dnd5e.dataModels.activity.BaseActivityData.prototype.richTooltip = async function (enrichmentOptions={}) {
-                return {
-                    content: await renderTemplate(
-                    this.constructor.ACTIVITY_TOOLTIP_TEMPLATE, await this.getCardData(enrichmentOptions)
-                    ),
-                    classes: ["dnd5e2", "dnd5e-tooltip", "item-tooltip"]
-                };
-            }    
-            game.dnd5e.dataModels.activity.BaseActivityData.prototype.getDataParent = function (property) {
-                return this[property] ?? this.parent?.parent[property] ?? this.parent[property];
-            }        
-            game.dnd5e.dataModels.activity.BaseActivityData.prototype.getCardData = async function ({ activity, ...enrichmentOptions }={}) {
-                const { name, type, img } = this;
-                const isIdentified = this.identified !== false || this.parent?.parent.identified !== false || this.parent.identified !== false;
-                const context = {
-                    name, type, img,
-                    labels: foundry.utils.deepClone(this.getDataParent('labels')),
-                    config: CONFIG.DND5E,
-                    controlHints: game.settings.get("dnd5e", "controlHints"),
-                    description: {
-                        value: await TextEditor.enrichHTML(this.description?.chatFlavor ?? "", {
-                            rollData: this.getRollData(), relativeTo: this, ...enrichmentOptions
-                        })
-                    },
-                    uses: (this.hasLimitedUses || this.parent?.parent.hasLimitedUses || this.parent.hasLimitedUses) && (game.user.isGM || this.parent?.parent.identified || this.parent.identified) ? this.getDataParent('uses') : null,
-                    materials: this.getDataParent('materials'),
-                    tags: this.labels?.components?.tags ?? this.parent?.parent?.labels?.components?.tags ?? this.parent.labels?.components?.tags,
-                    isSpell : this.getDataParent('isSpell'),
-                    parentType: this.parent?.parent.type ?? this.parent.type
-                }
-                if(context.isSpell && !context.labels.components) {
-                    context.labels.components = this.parent?.parent.labels.components ?? this.parent.labels.components;
-                }
-                if(context.labels?.damage?.length) {
+        _init() {
+            super._init();
+            
+            BG3UTILS.patchFunc("game.dnd5e.dataModels.ItemDataModel.prototype.getCardData", async function (wrapped, { activity, ...enrichmentOptions }={}) {
+                const context = await wrapped.call(this);
+                if(context.labels?.damages?.length) {
                     let textDamage = '';
                     const rollData = (activity ?? this.parent).getRollData();
-                    for(let i = 0; i < context.labels.damage.length; i++) {
+                    for(let i = 0; i < context.labels.damages.length; i++) {
                         // [[/damage {{damage.formula}}{{#if damage.damageType}} type={{damage.damageType}}{{/if}}]]
-                        textDamage += `[[/damage ${context.labels.damage[i].formula}${context.labels.damage[i].damageType ? ` type=${context.labels.damage[i].damageType}` : ''}]]`;
-                        if(i < context.labels.damage.length - 1) textDamage += ' | ';
+                        textDamage += `[[/damage ${context.labels.damages[i].formula}${context.labels.damages[i].damageType ? ` type=${context.labels.damages[i].damageType}` : ''}]]`;
+                        if(i < context.labels.damages.length - 1) textDamage += ' | ';
                     }
                     context.enrichDamage = {
                         value: await TextEditor.enrichHTML(textDamage ?? "", {
@@ -699,103 +487,336 @@ Hooks.on("BG3HotbarInit", async (BG3Hotbar) => {
                         })
                     }
                 }
-                context.properties = [];
-                if ( game.user.isGM || isIdentified ) {
-                    context.properties.push(
-                        ...Object.values((this.activationLabels ? this.activationLabels : (this.parent?.parent.labels?.activations?.[0] ? this.parent?.parent.labels?.activations?.[0] : this.parent.labels?.activations?.[0])) ?? {})
-                    );
-                }
-                context.properties = context.properties.filter(_ => _);
-                context.hasProperties = context.tags?.length || context.properties.length;
-                
+                if(!this.hasOwnProperty('identified') && this.hasLimitedUses) context.uses = this.uses;
                 return context;
+            }, "MIXED");
+            game.dnd5e.dataModels.ItemDataModel.ITEM_TOOLTIP_TEMPLATE = `modules/${MODULE_NAME}/templates/tooltips/item-tooltip.hbs`;
+            if(game.settings.get(BG3CONFIG.MODULE_NAME, 'showDamageRanges')) this._tooltipRangeDamage();
+            // Add Tooltip to Activity
+            if(game.dnd5e.dataModels.activity) {
+                game.dnd5e.dataModels.activity.BaseActivityData.ACTIVITY_TOOLTIP_TEMPLATE = `modules/${MODULE_NAME}/templates/tooltips/activity-tooltip.hbs`;
+                game.dnd5e.dataModels.activity.BaseActivityData.prototype.richTooltip = async function (enrichmentOptions={}) {
+                    return {
+                        content: await renderTemplate(
+                        this.constructor.ACTIVITY_TOOLTIP_TEMPLATE, await this.getCardData(enrichmentOptions)
+                        ),
+                        classes: ["dnd5e2", "dnd5e-tooltip", "item-tooltip"]
+                    };
+                }    
+                game.dnd5e.dataModels.activity.BaseActivityData.prototype.getDataParent = function (property) {
+                    return this[property] ?? this.parent?.parent[property] ?? this.parent[property];
+                }        
+                game.dnd5e.dataModels.activity.BaseActivityData.prototype.getCardData = async function ({ activity, ...enrichmentOptions }={}) {
+                    const { name, type, img } = this;
+                    const isIdentified = this.identified !== false || this.parent?.parent.identified !== false || this.parent.identified !== false;
+                    const context = {
+                        name, type, img,
+                        labels: foundry.utils.deepClone(this.getDataParent('labels')),
+                        config: CONFIG.DND5E,
+                        controlHints: game.settings.get("dnd5e", "controlHints"),
+                        description: {
+                            value: await TextEditor.enrichHTML(this.description?.chatFlavor ?? "", {
+                                rollData: this.getRollData(), relativeTo: this, ...enrichmentOptions
+                            })
+                        },
+                        uses: (this.hasLimitedUses || this.parent?.parent.hasLimitedUses || this.parent.hasLimitedUses) && (game.user.isGM || this.parent?.parent.identified || this.parent.identified) ? this.getDataParent('uses') : null,
+                        materials: this.getDataParent('materials'),
+                        tags: this.labels?.components?.tags ?? this.parent?.parent?.labels?.components?.tags ?? this.parent.labels?.components?.tags,
+                        isSpell : this.getDataParent('isSpell'),
+                        parentType: this.parent?.parent.type ?? this.parent.type
+                    }
+                    if(context.isSpell && !context.labels.components) {
+                        context.labels.components = this.parent?.parent.labels.components ?? this.parent.labels.components;
+                    }
+                    if(context.labels?.damage?.length) {
+                        let textDamage = '';
+                        const rollData = (activity ?? this.parent).getRollData();
+                        for(let i = 0; i < context.labels.damage.length; i++) {
+                            // [[/damage {{damage.formula}}{{#if damage.damageType}} type={{damage.damageType}}{{/if}}]]
+                            textDamage += `[[/damage ${context.labels.damage[i].formula}${context.labels.damage[i].damageType ? ` type=${context.labels.damage[i].damageType}` : ''}]]`;
+                            if(i < context.labels.damage.length - 1) textDamage += ' | ';
+                        }
+                        context.enrichDamage = {
+                            value: await TextEditor.enrichHTML(textDamage ?? "", {
+                                rollData, relativeTo: this.parent, ...enrichmentOptions
+                            })
+                        }
+                    }
+                    context.properties = [];
+                    if ( game.user.isGM || isIdentified ) {
+                        context.properties.push(
+                            ...Object.values((this.activationLabels ? this.activationLabels : (this.parent?.parent.labels?.activations?.[0] ? this.parent?.parent.labels?.activations?.[0] : this.parent.labels?.activations?.[0])) ?? {})
+                        );
+                    }
+                    context.properties = context.properties.filter(_ => _);
+                    context.hasProperties = context.tags?.length || context.properties.length;
+                    
+                    return context;
+                }
+            }
+
+            const oldActivate = dnd5e.tooltips._onHoverContentLink;
+            dnd5e.tooltips._onHoverContentLink = async function(doc) {
+                if(!doc.MACRO_TOOLTIP_TEMPLATE) doc.MACRO_TOOLTIP_TEMPLATE = `modules/${BG3CONFIG.MODULE_NAME}/templates/tooltips/macro-tooltip.hbs`;
+                if(!doc.richTooltip) doc.richTooltip = async function(enrichmentOptions={}) {
+                    return {
+                        content: await renderTemplate(
+                            this.MACRO_TOOLTIP_TEMPLATE, await this.getCardData(enrichmentOptions)
+                        ),
+                        classes: ["dnd5e2", "dnd5e-tooltip", "item-tooltip"]
+                    };
+                };
+                if(!doc.getCardData) doc.getCardData = async function({ activity, ...enrichmentOptions }={}) {
+                    const { name, type, img = 'icons/svg/book.svg' } = this;
+                    const context = {
+                        name, type, img,
+                        config: CONFIG.DND5E,
+                        controlHints: game.settings.get("dnd5e", "controlHints")
+                    }
+                    return context;
+                };
+                oldActivate.bind(this)(doc);
+            }
+
+            const rollEvents = ["dnd5e.preRollAttackV2", "dnd5e.preRollSavingThrowV2", "dnd5e.preRollSkillV2", "dnd5e.preRollAbilityCheckV2", "dnd5e.preRollConcentrationV2", "dnd5e.preRollDeathSaveV2", "dnd5e.preRollToolV2"];
+            for(const event of rollEvents) Hooks.on(event, (rollConfig, dialogConfig, messageConfig) => {
+                if(!game.modules.get("midi-qol")?.active || !game.settings.get(MODULE_NAME, 'addAdvBtnsMidiQoL') || !ui.BG3HOTBAR.manager?.actor || ui.BG3HOTBAR.manager?.actor !== rollConfig.workflow?.actor) return;
+                const state = ui.BG3HOTBAR.manager.actor.getFlag(BG3CONFIG.MODULE_NAME, "advState"),
+                    once = ui.BG3HOTBAR.manager.actor.getFlag(BG3CONFIG.MODULE_NAME, "advOnce");
+                if(state !== undefined) {
+                    if(state === 'advBtn') rollConfig.advantage = true;
+                    else if(state === 'disBtn') rollConfig.disadvantage = true;
+                    if(once && !!ui.BG3HOTBAR.components.advantage) ui.BG3HOTBAR.components.advantage.setState(null);
+                }
+            });
+
+            const partials = [
+                `modules/${MODULE_NAME}/templates/tooltips/weapon-block.hbs`,
+                `modules/${MODULE_NAME}/templates/tooltips/activity-tooltip.hbs`
+            ];
+        
+            const paths = {};
+            for ( const path of partials ) {
+                paths[path.replace(".hbs", ".html")] = path;
+                paths[`bg3hotbar.${path.split("/").pop().replace(".hbs", "")}`] = path;
+            }
+            loadTemplates(paths);
+        }
+
+        _saveEnrichers() {
+            const stringNames = [
+                "attack", "award", "check", "concentration", "damage", "heal", "healing", "item", "save", "skill", "tool"
+            ],
+            pattern = new RegExp(`\\[\\[/(?<type>${stringNames.join("|")})(?<config> .*?)?]](?!])(?:{(?<label>[^}]+)})?`, "gi");
+            const enricher = this.enrichers.find(e => e.pattern.toString() == pattern.toString());
+            if(enricher) this.savedEnrichers.damage = enricher.enricher;
+        }
+
+        _tooltipRangeDamage() {
+            const stringNames = [
+                "attack", "award", "check", "concentration", "damage", "heal", "healing", "item", "save", "skill", "tool"
+            ],
+            pattern = new RegExp(`\\[\\[/(?<type>${stringNames.join("|")})(?<config> .*?)?]](?!])(?:{(?<label>[^}]+)})?`, "gi"),
+            damageEnricher = this.enrichers.find(e => e.pattern.toString() == pattern.toString());
+            if(damageEnricher) {
+                const prevEnricher = damageEnricher.enricher;
+                damageEnricher.id = 'damageEnricher';
+                damageEnricher.enricher = async function(match, options) {
+                    const formatted = await prevEnricher(match, options);
+                    let { type, config, label } = match.groups;
+                    if(['damage', 'heal', 'healing'].includes(type)) {
+                        const rollLink = formatted.querySelector('.roll-link');
+                        if(rollLink) {
+                            if(formatted.dataset.formulas) rollLink.innerHTML = rollLink.innerHTML.replace(formatted.dataset.formulas, await BG3UTILS.damageToRange(formatted.dataset.formulas));
+                        }
+                    }
+                    return formatted;
+                }
             }
         }
+    }
 
-        const partials = [
-            `modules/${MODULE_NAME}/templates/tooltips/weapon-block.hbs`,
-            `modules/${MODULE_NAME}/templates/tooltips/activity-tooltip.hbs`
-        ];
-    
-        const paths = {};
-        for ( const path of partials ) {
-            paths[path.replace(".hbs", ".html")] = path;
-            paths[`bg3hotbar.${path.split("/").pop().replace(".hbs", "")}`] = path;
+    class DND5EGridCell extends CONFIG.BG3HUD.CORE.CELL {
+        constructor(data, parent) {
+            super(data, parent);
         }
-        loadTemplates(paths);
-    }
 
-    BG3Hotbar.overrideClass('AbilityContainer', 'getInitMethod', getInitMethod);
-    BG3Hotbar.overrideClass('AbilityContainer', 'getMenuBtns', getMenuBtns);
-    BG3Hotbar.overrideClass('RestTurnContainer', 'getRestBtns', getRestBtns);
-    BG3Hotbar.overrideClass('DeathSavesContainer', 'getData', getDataDSC);
-    BG3Hotbar.overrideClass('DeathSavesContainer', 'isVisible', isVisibleDSC);
-    BG3Hotbar.overrideClass('DeathSavesContainer', 'skullClick', skullClickDSC);
-    BG3Hotbar.overrideClass('FilterContainer', 'getFilterData', getFilterData);
-    BG3Hotbar.overrideClass('FilterContainer', '_autoCheckUsed', _autoCheckUsed);
-    BG3Hotbar.overrideClass('AutoPopulateFeature', 'checkExtraConditions', checkExtraConditions);
-    // BG3Hotbar.overrideClass('AutoPopulateFeature', 'checkPreparedSpell', checkPreparedSpell);
-    BG3Hotbar.overrideClass('AutoPopulateFeature', 'getItemsList', getItemsList);
-    BG3Hotbar.overrideClass('AutoPopulateFeature', 'constructItemData', constructItemData);
-    BG3Hotbar.overrideClass('AutoPopulateFeature', '_getCombatActionsList', _getCombatActionsList);
-    BG3Hotbar.overrideClass('AutoPopulateFeature', '_populateWeaponsToken', _populateWeaponsToken);
-    BG3Hotbar.overrideClass('WeaponContainer', 'autoEquipWeapons', autoEquipWeapons);
-    BG3Hotbar.overrideClass('GridCell', 'getActionType', getActionType);
-    BG3Hotbar.overrideClass('GridCell', 'getPreparationMode', getPreparationMode);
-    BG3Hotbar.overrideClass('GridCell', 'useItem', useItem);
-    BG3Hotbar.overrideClass('GridCell', 'getData', getDataGC);
-    BG3Hotbar.overrideClass('GridCell', 'getItemMenuBtns', getItemMenuBtns);
-    BG3Hotbar.overrideClass('GridCell', 'getItemUses', getItemUses);
-    BG3Hotbar.overrideClass('CPRActionsDialog', 'getData', getDataCPR);
-    // BG3Hotbar.overrideClass('ItemUpdateManager', 'retrieveNewItem', retrieveNewItem);
-    BG3Hotbar.overrideClass('AdvContainer', 'isVisible', isVisibleAC);
-    BG3Hotbar.overrideClass('AdvContainer', 'getBtnData', getBtnDataAC);
-    // BG3Hotbar.overrideClass('AdvContainer', 'setState', setStateAC);
-    BG3Hotbar.overrideClass('BG3TooltipManager', '_saveEnrichers', _saveEnrichers);
-    BG3Hotbar.overrideClass('BG3TooltipManager', '_tooltipRangeDamage', _tooltipRangeDamage);
-    BG3Hotbar.overrideClass('BG3TooltipManager', 'extendTooltipInit', extendTooltipInit);
-
-    // ui.BG3HOTBAR.tooltipManager._saveEnrichers();
-    // ui.BG3HOTBAR.tooltipManager.extendTooltipInit();
-    
-    // Add Tooltip to Macro
-    const customRichTooltip = async function (enrichmentOptions={}) {
-        return {
-            content: await renderTemplate(
-            this.MACRO_TOOLTIP_TEMPLATE, await this.getCardData(enrichmentOptions)
-            ),
-            classes: ["dnd5e2", "dnd5e-tooltip", "item-tooltip"]
-        };
-    }
-    const customGetCardData = async function ({ activity, ...enrichmentOptions }={}) {
-        const { name, type, img = 'icons/svg/book.svg' } = this;
-        const context = {
-            name, type, img,
-            config: CONFIG.DND5E,
-            controlHints: game.settings.get("dnd5e", "controlHints")
+        getActionType(itemData) {
+            return itemData.system?.activation?.type?.toLowerCase() ?? itemData.activation?.type?.toLowerCase() ?? null;
         }
-        return context;
-    }
 
-    const oldActivate = dnd5e.tooltips._onHoverContentLink;
-    dnd5e.tooltips._onHoverContentLink = async function(doc) {
-        if(!doc.MACRO_TOOLTIP_TEMPLATE) doc.MACRO_TOOLTIP_TEMPLATE = `modules/${BG3CONFIG.MODULE_NAME}/templates/tooltips/macro-tooltip.hbs`;
-        if(!doc.richTooltip) doc.richTooltip = customRichTooltip;
-        if(!doc.getCardData) doc.getCardData = customGetCardData;
-        oldActivate.bind(this)(doc);
-    }
-
-    const rollEvents = ["dnd5e.preRollAttackV2", "dnd5e.preRollSavingThrowV2", "dnd5e.preRollSkillV2", "dnd5e.preRollAbilityCheckV2", "dnd5e.preRollConcentrationV2", "dnd5e.preRollDeathSaveV2", "dnd5e.preRollToolV2"];
-    for(const event of rollEvents) Hooks.on(event, (rollConfig, dialogConfig, messageConfig) => {
-        if(!game.modules.get("midi-qol")?.active || !game.settings.get(MODULE_NAME, 'addAdvBtnsMidiQoL') || !ui.BG3HOTBAR.manager?.actor || ui.BG3HOTBAR.manager?.actor !== rollConfig.workflow?.actor) return;
-        const state = ui.BG3HOTBAR.manager.actor.getFlag(BG3CONFIG.MODULE_NAME, "advState"),
-            once = ui.BG3HOTBAR.manager.actor.getFlag(BG3CONFIG.MODULE_NAME, "advOnce");
-        if(state !== undefined) {
-            if(state === 'advBtn') rollConfig.advantage = true;
-            else if(state === 'disBtn') rollConfig.disadvantage = true;
-            if(once && !!ui.BG3HOTBAR.components.advantage) ui.BG3HOTBAR.components.advantage.setState(null);
+        getPreparationMode(itemData) {
+            return itemData.system?.preparation?.mode ?? null;
         }
-    });
+
+        async useItem(item, e, override) {
+            let used = false,
+                options = {};
+            if(item.execute) item.execute();
+            else if(item.use) {
+                options = {
+                    configureDialog: false,
+                    legacy: false,
+                    event: e
+                };
+                if (e.ctrlKey) options.disadvantage = true;
+                if (e.altKey) options.advantage = true;
+                used = await item.use(options, { event: e });
+            } else if(item.consume) {
+                item.consume(e);
+                if(item.toChat) item.toChat(e);
+                used = await this.useItem(item, this.data.override.level ?? item.system.level);
+            } else if(item.sheet?.render) item.sheet.render(true);
+            else item.toChat(e);
+            return used;
+        }
+
+        async getData() {
+            let itemData = await this.item,
+                data = {};
+            if(itemData) {
+                data = {...data, ...{
+                        uuid: itemData.uuid,
+                        name: itemData.name,
+                        icon: itemData.img ?? 'icons/svg/book.svg',
+                        actionType: this.getActionType(itemData),
+                        itemType: itemData.type,
+                        quantity: itemData.system?.quantity && itemData.system?.quantity > 1 ? itemData.system?.quantity : false
+                    },
+                    ...await this.getItemUses()
+                };
+                if(itemData.type === "spell") data = {...data, ...{preparationMode: this.getPreparationMode(itemData), level: itemData.system?.level}};
+                if(itemData.type === 'feat') data = {...data, ...{featType: itemData.system?.type?.value || 'default'}};
+            }
+            return data;
+        }
+
+        async getItemMenuBtns() {
+            return this.data.item ? {activity: {
+                label: game.i18n.localize("BG3.Hotbar.ContextMenu.ConfigureActivities"),
+                icon: 'fas fa-cog',
+                visibility: !this.data.item,
+                click: () => {
+                    if(!this.data.item) return;
+                    this.menuItemAction('activity');
+                }
+            }} : {};
+        }
+
+        async getItemUses() {
+            const itemData = await this.item;
+            if (itemData.hasLimitedUses && (game.user.isGM || !itemData.system.hasOwnProperty('identified') || itemData.system.identified)) {
+                const uses = itemData.system.uses;
+                const value = uses.value ?? 0;
+                const max = uses.max ?? 0;
+
+                // Only show uses if max > 0.
+                if (max > 0) return {uses: {value: value, max: max}};
+                else return null;
+            }
+            return null;
+        }
+    }
+
+    class DND5EAutoPopulateFeature extends CONFIG.BG3HUD.FEATURES.POPULATE {
+        static checkPreparedSpell(item) {
+            const prep = item.system?.preparation;
+            // Skip if it's an unprepared "prepared" spell
+            if (!prep?.prepared && prep?.mode === "prepared") return false;
+            // Include if it's prepared or has a valid casting mode
+            if (!prep?.prepared && !["pact", "apothecary", "atwill", "innate", "ritual", "always"].includes(prep?.mode)) return false;
+            return true;
+        }
+
+        static shouldEnforceSpellPreparation(actor, tokenId) {
+            const isLinked = BG3UTILS.isTokenLinked(actor, tokenId);
+        
+            // If linked token (including PCs) - use PC setting
+            if (isLinked) return game.settings.get(MODULE_NAME, 'enforceSpellPreparationPC');
+            
+            // If unlinked token - use NPC setting
+            return game.settings.get(MODULE_NAME, 'enforceSpellPreparationNPC');
+        }
+
+        static checkExtraConditions(item, actor, manager) {
+            let isValid = true;
+            if(!game.settings.get(BG3CONFIG.MODULE_NAME, 'noActivityAutoPopulate') && BG3UTILS.itemIsPassive(item)) isValid = false;
+            console.log(this)
+            if (item.type === "spell" && (this.shouldEnforceSpellPreparation(actor, manager.currentTokenId) && !this.checkPreparedSpell(item))) isValid = false;
+            return isValid;
+        }
+
+        static async _getCombatActionsList(actor) {
+            let ids = [];
+            if(game.modules.get("chris-premades")?.active && game.packs.get("chris-premades.CPRActions")?.index?.size) {
+                const pack = game.packs.get("chris-premades.CPRActions"),
+                    promises = [];
+                for(const id of game.settings.get(BG3CONFIG.MODULE_NAME, 'choosenCPRActions')) {
+                    const item = actor.items.find(i => i.system.identifier === pack.index.get(id)?.system?.identifier);
+                    if(item) ids.push(item.uuid);
+                    else {
+                        const cprItem = pack.index.get(id);
+                        if(cprItem) {
+                            promises.push(new Promise(async (resolve, reject) => {
+                                let item = await pack.getDocument(cprItem._id);
+                                resolve(item);
+                            }))
+                        }
+                    }
+                }
+                if(promises.length) {
+                    await Promise.all(promises).then(async (values) => {
+                        let tmpDoc = await actor.createEmbeddedDocuments('Item', values);
+                        ids = tmpDoc.map(i => i.uuid);
+                    })
+                }
+            } else {
+                const compendium = await game.packs.get("bg3-hud-dnd5e.bg3-inspired-hud");
+                if(!compendium) return ids;
+                ids = compendium.folders.find(f => f.name === 'Common Actions').contents.map(m => m.uuid);
+            }
+            return ids;
+        }
+
+        static async _populateWeaponsToken(actor, manager) {
+            if (!actor?.items || !manager?.containers?.weapon) return;
+            try {
+                // Process each container
+                let weaponsList = actor.items.filter(w => w.type == 'weapon'),
+                toUpdate = [];
+                if(weaponsList.length) {
+                    for(let i = 0; i < weaponsList.length; i++) {
+                        const gridKey = `0-0`,
+                        item = weaponsList[i];
+                        if(i < 3) {
+                        manager.containers.weapon[i].items = {};
+                        const itemData = {uuid: item.uuid};
+                        manager.containers.weapon[i].items[gridKey] = itemData;
+                        }
+                        if((i === 0 && !item.system.equipped) || (i > 0 && item.system.equipped)) toUpdate.push({_id: item.uuid.split('.').pop(), "system.equipped": (i === 0 ? 1 : 0)})
+                    }
+                    if(game.settings.get(BG3CONFIG.MODULE_NAME, 'enableWeaponAutoEquip')) actor.updateEmbeddedDocuments("Item", toUpdate);
+                }     
+            } catch (error) {
+                console.error("BG3 Inspired Hotbar | Error auto-populating weapons token hotbar:", error);
+            }
+        }
+    }
+
+    BG3Hotbar.overrideClass('COMPONENTS.PORTRAIT.ABILITY', DND5EAbilityContainer);
+    BG3Hotbar.overrideClass('COMPONENTS.PORTRAIT.DEATH', DND5EDeathSavesContainer);
+    BG3Hotbar.overrideClass('COMPONENTS.RESTTURN', DND5ERestTurnContainer);
+    BG3Hotbar.overrideClass('COMPONENTS.ADVANTAGE', DND5EAdvContainer);
+    BG3Hotbar.overrideClass('COMPONENTS.HOTBAR.FILTER', DND5EFilterContainer);
+    BG3Hotbar.overrideClass('COMPONENTS.WEAPON', DND5EWeaponContainer);
+    BG3Hotbar.overrideClass('DIALOGS.CPR', DND5ECPRActionsDialog);
+    BG3Hotbar.overrideClass('MANAGERS.TOOLTIP', DND5EBG3TooltipManager);
+    BG3Hotbar.overrideClass('CORE.CELL', DND5EGridCell);
+    BG3Hotbar.overrideClass('FEATURES.POPULATE', DND5EAutoPopulateFeature);
+
+    game.settings.menus.get(BG3CONFIG.MODULE_NAME + ".chooseCPRActions").type = DND5ECPRActionsDialog;
+    game.settings.menus.get(BG3CONFIG.MODULE_NAME + ".chooseCPRActions").visible = () => game.modules.get("chris-premades")?.active;
+    game.settings.settings.get(BG3CONFIG.MODULE_NAME + ".choosenCPRActions").default = ["9wbU6kYxfAaRFrbI", "ga6foNaesV3UJFKm", "eqOOv3smPuxTq7Xm", "pmn1iLabeps5aPtW", "nmkcJWUba7hyi5m5", "34jFXjMOseErle3M"]
 
     Hooks.on("renderSettingsConfig", (app, html, data) => {
         const detailsSettings = [
@@ -838,7 +859,7 @@ Hooks.on("BG3HotbarInit", async (BG3Hotbar) => {
             migrationClient = game.settings.get(MODULE_NAME, 'migrationV3ToV4Client');
         game.settings.settings.forEach(s => {
             if(s.namespace === 'bg3-hud-dnd5e' && !migrationClient && s.config) {
-                const v3Setting = game.settings.storage.get("client")[`${BG3CONFIG.MODULE_NAME}.${s.key}`] ?? null;
+                const v3Setting = game.settings.storage.get("client")[`${BG3CONFIG.MODULE_NAME}.${s.key}`] ?? game.settings.storage.get("world")[`${BG3CONFIG.MODULE_NAME}.${s.key}`] ?? null;
                 if(v3Setting) {
                     const saved = JSON.parse(v3Setting);
                     if(saved !== s.default) {

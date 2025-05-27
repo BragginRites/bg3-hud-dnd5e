@@ -21,6 +21,18 @@
                 "Name": "Add Advantage/Disadvantage buttons",
                 "Hint": "Add an advantage or disadvantage source. Need MidiQoL fast forward to be enable."
             }
+        },
+        "autoPopulateCombatContainer": {
+            "Name": "Autopopulate the basic actions container",
+            "Hint": "Auto-populate the basic actions with dodge, dash, etc (Compatible with CPR) for newly created tokens. Disable this will unlock the container."
+        },
+        "Menu": {
+            "CPR": {
+                "Name": "Choose CPR Actions",
+                "Hint": "Select which CPR actions to auto-populate in common actions container. Need Cauldron of Plentiful Resources.",
+                "Label": "Select CPR Actions",
+                "UpTo6": "Select which CPR actions to auto-populate in common actions container. Up to 6."
+            }
         }
     },
     "BG3.Hotbar": {
