@@ -1,0 +1,170 @@
+/* ==========================================================================
+   D&D 5e Portrait Components
+   ========================================================================== */
+
+#bg3-hotbar-container .bg3-portrait-container {
+    position: absolute;
+    right: 100%;
+    bottom: var(--position-bottom, 10px);
+    width: var(--bg3-portrait-size, 120px);
+    min-width: 80px;
+    height: var(--bg3-portrait-size, 120px);
+    min-height: 80px;
+    overflow: visible;
+    display: block;
+    margin-right: 8px;
+    z-index: 200;
+}
+
+#bg3-hotbar-container .portrait-image-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    cursor: pointer;
+    border: none;
+    outline: none;
+    box-shadow: none;
+    border-radius: 50%;
+}
+
+#bg3-hotbar-container .portrait-image-subcontainer {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+#bg3-hotbar-container .portrait-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    border: none;
+    outline: none;
+    box-shadow: none;
+}
+
+/* ==========================================================================
+   Health Overlay (Red damage indicator)
+   ========================================================================== */
+
+#bg3-hotbar-container .health-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    pointer-events: none;
+    border-radius: 50%;
+}
+
+#bg3-hotbar-container .health-overlay .damage-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    transition: height 0.3s ease-out, opacity 0.3s ease-out;
+    background: rgba(255, 0, 0, 0.4);
+}
+
+/* ==========================================================================
+   HP Text Display
+   ========================================================================== */
+
+#bg3-hotbar-container .hp-text {
+    position: absolute;
+    bottom: 25px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #fff;
+    text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+    font-size: 1.2em;
+    font-weight: bold;
+    text-align: center;
+    width: 100%;
+    z-index: 20;
+}
+
+#bg3-hotbar-container .temp-hp-text {
+    color: #7bb3e8;
+    font-size: 1.2em;
+    margin-bottom: 0;
+    text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+}
+
+#bg3-hotbar-container .hp-label {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#bg3-hotbar-container .hp-label,
+#bg3-hotbar-container .hp-controls {
+    height: 1.75em;
+}
+
+/* ==========================================================================
+   HP Controls (shown on hover)
+   ========================================================================== */
+
+#bg3-hotbar-container .hp-controls {
+    align-items: center;
+    justify-content: center;
+    margin: 0 1rem;
+    display: none;
+}
+
+/* Show HP controls on portrait hover */
+#bg3-hotbar-container .bg3-portrait-container:has(.hp-controls):has(.portrait-image-container:hover) .hp-label,
+#bg3-hotbar-container .hp-text:hover .hp-label,
+#bg3-hotbar-container .hp-text[data-hp-locked="true"] .hp-label {
+    display: none;
+}
+
+#bg3-hotbar-container .bg3-portrait-container:has(.hp-controls):has(.portrait-image-container:hover) .hp-controls,
+#bg3-hotbar-container .hp-text:hover .hp-controls,
+#bg3-hotbar-container .hp-text[data-hp-locked="true"] .hp-controls {
+    display: flex;
+}
+
+#bg3-hotbar-container .hp-controls > * {
+    flex: 1;
+}
+
+#bg3-hotbar-container .hp-controls i {
+    font-size: larger;
+}
+
+#bg3-hotbar-container .hp-controls > .hp-control-death {
+    cursor: pointer;
+    padding-right: 0.25rem;
+}
+
+#bg3-hotbar-container .hp-controls > .hp-control-full {
+    cursor: pointer;
+    padding-left: 0.25rem;
+}
+
+#bg3-hotbar-container .hp-controls > .hp-control-death {
+    color: red;
+}
+
+#bg3-hotbar-container .hp-controls > .hp-control-full {
+    color: #74cf00;
+}
+
+#bg3-hotbar-container .hp-controls input {
+    background: url(../../../../../ui/parchment.jpg) repeat;
+    flex: 2;
+    text-align: center;
+    color: var(--color-text-dark-primary, #000);
+    border: 1px solid #666;
+    border-radius: 3px;
+    padding: 2px 4px;
+}
+
+#bg3-hotbar-container .hp-controls input:focus {
+    outline: 1px solid #fff;
+}
+

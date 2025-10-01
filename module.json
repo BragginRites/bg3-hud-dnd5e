@@ -11,8 +11,8 @@
       }
     ],
     "compatibility": {
-      "minimum": "12",
-      "verified": "12"
+      "minimum": "13",
+      "verified": "13"
     },
     "esmodules": [
       "scripts/module.js"
@@ -20,49 +20,14 @@
     "styles": [
       "styles/index.css"
     ],
-    "languages": [
-      {
-        "lang": "en",
-        "name": "English",
-        "path": "lang/en.json",
-        "flags": {}
-      },
-      {
-        "lang": "pl",
-        "name": "Polski",
-        "path": "lang/pl.json",
-        "flags": {}
-      },
-      {
-        "lang": "fr",
-        "name": "Français",
-        "path": "lang/fr.json",
-        "flags": {}
-      },
-      {
-        "lang": "nl",
-        "name": "Nederlands",
-        "path": "lang/nl.json",
-        "flags": {}
-      },
-      {
-        "lang": "ru",
-        "name": "Русский",
-        "path": "lang/ru.json",
-        "flags": {}
-      }
-    ],
     "relationships": {
       "requires": [
         {
-          "id": "lib-wrapper",
+          "id": "bg3-hud-core",
           "type": "module",
-          "compatibility": {}
-        },
-        {
-          "id": "colorsettings",
-          "type": "module",
-          "compatibility": {}
+          "compatibility": {
+            "minimum": "0.1.0"
+          }
         }
       ],
       "systems": [
@@ -78,18 +43,5 @@
     "manifest": "https://github.com/BragginRites/bg3-hud-dnd5e/releases/download/0.1.0/module.json",
     "download": "https://github.com/BragginRites/bg3-hud-dnd5e/releases/download/0.1.0/bg3-hud-dnd5e.zip",
     "readme": "README.md",
-    "bugs": "https://github.com/BragginRites/bg3-hud-dnd5e/issues",
-    "packs": [
-      {
-        "name": "bg3-inspired-hud",
-        "label": "BG3 Inspired HUD",
-        "path": "packs/bg3-inspired-hud",
-        "type": "Macro",
-        "ownership": {
-          "PLAYER": "NONE",
-          "ASSISTANT": "OWNER"
-        },
-        "system": "dnd5e"
-      }
-    ]
+    "bugs": "https://github.com/BragginRites/bg3-hud-dnd5e/issues"
   }
