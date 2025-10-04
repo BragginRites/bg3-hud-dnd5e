@@ -92,14 +92,23 @@ export class DnD5eAutoPopulate extends AutoPopulateFramework {
             if (selectedType.includes(':')) {
                 // Handle subtype (e.g., "consumable:potion")
                 const [mainType, subType] = selectedType.split(':');
-                if (item.type === mainType && item.system?.type?.value === subType) {
-                    return true;
-                }
+
+                if (item.type !== mainType) continue;
+
+                // dnd5e v5+: many documents store subtypes on system.type.subtype
+                // Historical variants used system.consumableType or other fields
+                const systemType = item.system?.type;
+                const detectedSubtype = (
+                    systemType?.subtype ??
+                    item.system?.consumableType ??
+                    // Fallbacks seen in older data models
+                    systemType?.value
+                );
+
+                if (detectedSubtype === subType) return true;
             } else {
-                // Handle main type (e.g., "weapon")
-                if (item.type === selectedType) {
-                    return true;
-                }
+                // Handle main type (e.g., "weapon", "feat", "spell")
+                if (item.type === selectedType) return true;
             }
         }
         return false;
@@ -113,22 +122,20 @@ export class DnD5eAutoPopulate extends AutoPopulateFramework {
      * @private
      */
     _isSpellUsable(actor, item) {
-        // Get spell preparation method
-        const method = item.system?.method ?? item.system?.preparation?.mode;
-        const prepared = item.system?.prepared ?? item.system?.preparation?.prepared;
+        // dnd5e v5+: preparation info lives under system.preparation
+        const prep = item.system?.preparation ?? {};
+        const method = prep.mode;
+        const prepared = prep.prepared;
 
-        // Always include these spell types
-        const alwaysInclude = ['pact', 'apothecary', 'atwill', 'innate', 'ritual', 'always'];
-        if (alwaysInclude.includes(method)) {
-            return true;
-        }
+        // Always include these spell modes
+        const alwaysInclude = ['pact', 'atwill', 'innate', 'ritual', 'always'];
+        if (alwaysInclude.includes(method)) return true;
 
-        // For "prepared" spells, check if they're actually prepared
-        if (method === 'prepared') {
-            return prepared === true;
-        }
+        // For "prepared" spells, require prepared flag
+        if (method === 'prepared') return prepared === true;
 
-        // Include other spell types if they're prepared
+        // Default: if no explicit method, include if prepared flag is true; otherwise include
+        // cantrips and other free-use spells typically have a mode above
         return prepared === true;
     }
 
@@ -140,21 +147,23 @@ export class DnD5eAutoPopulate extends AutoPopulateFramework {
      */
     _hasActivities(item) {
         const activities = item.system?.activities;
-        
-        // D&D 5e v4+: Check if activities Map has entries
+
+        // dnd5e v5+: activities is typically a plain object keyed by id
         if (activities instanceof Map) {
-            return activities.size > 0;
+            if (activities.size > 0) return true;
+        } else if (activities && typeof activities === 'object') {
+            if (Array.isArray(activities)) {
+                if (activities.length > 0) return true;
+            } else if (Object.keys(activities).length > 0) {
+                return true;
+            }
         }
 
-        // D&D 5e v3 fallback: Check activation type
-        if (item.system?.activation?.type && item.system.activation.type !== 'none') {
-            return true;
-        }
+        // Fallback to legacy activation
+        if (item.system?.activation?.type && item.system.activation.type !== 'none') return true;
 
         // Weapons and equipment are generally usable
-        if (item.type === 'weapon' || item.type === 'equipment') {
-            return true;
-        }
+        if (item.type === 'weapon' || item.type === 'equipment') return true;
 
         return false;
     }

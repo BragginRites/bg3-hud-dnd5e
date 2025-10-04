@@ -54,6 +54,15 @@ export class DnD5eFilterContainer extends FilterContainer {
         });
 
         filters.push({
+            id: 'legendary',
+            label: 'Legendary Action',
+            symbol: 'fa-dragon',
+            classes: ['action-type-button'],
+            color: getComputedStyle(document.documentElement).getPropertyValue('--dnd5e-filter-legendary')?.trim() || '#ffd700',
+            data: { actionType: 'legendary' }
+        });
+
+        filters.push({
             id: 'feature',
             label: 'Feature',
             symbol: 'fa-star',
