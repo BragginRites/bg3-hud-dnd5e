@@ -60,7 +60,7 @@ export class DeathSaves extends BG3Component {
             this.element.style.opacity = '0';
             // After fade, set display none
             setTimeout(() => {
-                if (!this.isVisible()) {
+                if (this.element && !this.isVisible()) {
                     this.element.style.display = 'none';
                 }
             }, 200);
