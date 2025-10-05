@@ -8,6 +8,7 @@ import { createDnD5ePassivesContainer } from './components/containers/DnD5ePassi
 import { DnD5eActionButtonsContainer } from './components/containers/DnD5eActionButtonsContainer.js';
 import { DnD5eFilterContainer } from './components/containers/DnD5eFilterContainer.js';
 import { createDnD5eWeaponSetContainer } from './components/containers/DnD5eWeaponSetContainer.js';
+import { isContainer, getContainerContents } from './components/containers/DnD5eContainerPopover.js';
 import { DnD5eAutoSort } from './features/DnD5eAutoSort.js';
 import { DnD5eAutoPopulate } from './features/DnD5eAutoPopulate.js';
 import { registerSettings } from './utils/settings.js';
@@ -229,6 +230,27 @@ class DnD5eAdapter {
         // Save the passive UUIDs to actor flags
         const passiveUuids = passiveFeats.map(feat => feat.uuid);
         await actor.setFlag(MODULE_ID, 'selectedPassives', passiveUuids);
+    }
+
+    /**
+     * Check if an item is a container (bag, pouch, box, etc.)
+     * Delegates to DnD5eContainerPopover module
+     * @param {Object} cellData - The cell's data object
+     * @returns {Promise<boolean>}
+     */
+    async isContainer(cellData) {
+        return await isContainer(cellData);
+    }
+
+    /**
+     * Get contents of a container item
+     * Delegates to DnD5eContainerPopover module
+     * @param {Item} containerItem - The container item
+     * @param {Actor} actor - The actor who owns the container
+     * @returns {Promise<Object>} Grid data with rows, cols, and items
+     */
+    async getContainerContents(containerItem, actor) {
+        return await getContainerContents(containerItem, actor);
     }
 
     /**

@@ -95,14 +95,13 @@ export class DnD5eAutoPopulate extends AutoPopulateFramework {
 
                 if (item.type !== mainType) continue;
 
-                // dnd5e v5+: many documents store subtypes on system.type.subtype
-                // Historical variants used system.consumableType or other fields
+                // dnd5e v5+: consumables store subtype in system.type.value
+                // e.g., { type: "consumable", system: { type: { value: "potion" } } }
                 const systemType = item.system?.type;
                 const detectedSubtype = (
-                    systemType?.subtype ??
-                    item.system?.consumableType ??
-                    // Fallbacks seen in older data models
-                    systemType?.value
+                    systemType?.value ??      // Primary: system.type.value (potions, scrolls, etc.)
+                    systemType?.subtype ??    // Fallback: system.type.subtype
+                    item.system?.consumableType  // Legacy: system.consumableType
                 );
 
                 if (detectedSubtype === subType) return true;
