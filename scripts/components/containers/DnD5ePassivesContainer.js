@@ -19,14 +19,36 @@ export async function createDnD5ePassivesContainer() {
      */
     class DnD5ePassivesContainer extends PassivesContainer {
         /**
-         * Get all passive items (all feat-type items for D&D 5e)
-         * @returns {Array<Item>} Array of feat items
+         * Get all passive items (feat-type items WITHOUT activities)
+         * @returns {Array<Item>} Array of passive feat items
          */
         getPassiveItems() {
             if (!this.actor) return [];
             
-            // Return all feat items - let the user decide what to display
-            return this.actor.items.filter(item => item.type === 'feat');
+            // Return only feat items that have NO activities
+            return this.actor.items.filter(item => {
+                if (item.type !== 'feat') return false;
+
+                const activities = item.system?.activities;
+
+                // Check if activities exist and have content
+                if (activities instanceof Map) {
+                    return activities.size === 0;
+                } else if (activities && typeof activities === 'object') {
+                    if (Array.isArray(activities)) {
+                        return activities.length === 0;
+                    } else {
+                        return Object.keys(activities).length === 0;
+                    }
+                }
+
+                // Fallback: check legacy activation
+                if (item.system?.activation?.type && item.system.activation.type !== 'none') {
+                    return false; // Has activation, not passive
+                }
+
+                return true; // No activities or activation, treat as passive
+            });
         }
 
         /**

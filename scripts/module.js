@@ -9,6 +9,7 @@ import { DnD5eActionButtonsContainer } from './components/containers/DnD5eAction
 import { DnD5eFilterContainer } from './components/containers/DnD5eFilterContainer.js';
 import { DnD5eAutoSort } from './features/DnD5eAutoSort.js';
 import { DnD5eAutoPopulate } from './features/DnD5eAutoPopulate.js';
+import { registerSettings } from './utils/settings.js';
 
 const MODULE_ID = 'bg3-hud-dnd5e';
 
@@ -19,91 +20,8 @@ console.log('BG3 HUD D&D 5e | Loading adapter');
  */
 Hooks.once('init', () => {
     console.log('BG3 HUD D&D 5e | Registering settings');
-    
-    // Enable/disable auto-populate on token creation
-    game.settings.register(MODULE_ID, 'autoPopulateEnabled', {
-        name: 'Enable Auto-Populate on Token Creation',
-        hint: 'Automatically populate the HUD when a token is first created. Configure which item types go to which grids using the menu below.',
-        scope: 'world',
-        config: true,
-        type: Boolean,
-        default: false,
-        restricted: true
-    });
-
-    // Auto-populate configuration (hidden, accessed via menu)
-    game.settings.register(MODULE_ID, 'autoPopulateConfiguration', {
-        name: 'Auto-Populate Configuration',
-        scope: 'world',
-        config: false,
-        type: Object,
-        default: {
-            grid0: ['weapon'], // Default: weapons in grid 0 (Grid 1 in UI)
-            grid1: ['spell'],   // Default: spells in grid 1 (Grid 2 in UI)
-            grid2: ['consumable:potion', 'consumable:poison', 'consumable:scroll'] // Default: potions, poisons, scrolls in grid 2 (Grid 3 in UI)
-        }
-    });
-    
-    // Register a menu button to configure item types per grid
-    game.settings.registerMenu(MODULE_ID, 'autoPopulateMenu', {
-        name: 'Configure Auto-Populate Item Types',
-        label: 'Configure Item Assignment',
-        hint: 'Assign which item types are automatically added to each hotbar grid when creating tokens.',
-        icon: 'fas fa-cog',
-        type: AutoPopulateConfigMenu,
-        restricted: true // GM only
-    });
+    registerSettings();
 });
-
-/**
- * Settings Menu for Auto-Populate Configuration
- * Opens the grid assignment dialog directly
- */
-class AutoPopulateConfigMenu extends FormApplication {
-    static get defaultOptions() {
-        return foundry.utils.mergeObject(super.defaultOptions, {
-            popOut: false // Don't create a form, just trigger the dialog
-        });
-    }
-
-    async render() {
-        // Don't render a form, just open the config dialog immediately
-        await this._showConfigDialog();
-        return this;
-    }
-
-    async _showConfigDialog() {
-        const adapter = ui.BG3HOTBAR?.registry?.activeAdapter;
-        if (!adapter || !adapter.autoPopulate) {
-            ui.notifications.error('Auto-populate adapter not available');
-            return;
-        }
-
-        try {
-            // Import the dialog (fix the path - it's in modules folder)
-            const { AutoPopulateConfigDialog } = await import('../../bg3-hud-core/scripts/components/ui/AutoPopulateConfigDialog.js');
-            
-            const choices = await adapter.autoPopulate.getItemTypeChoices();
-            const configuration = game.settings.get(MODULE_ID, 'autoPopulateConfiguration');
-
-            const dialog = new AutoPopulateConfigDialog({
-                choices: choices,
-                configuration: configuration
-            });
-
-            const result = await dialog.render();
-            
-            if (result) {
-                // Save the new configuration
-                await game.settings.set(MODULE_ID, 'autoPopulateConfiguration', result);
-                ui.notifications.info('Auto-populate configuration saved');
-            }
-        } catch (error) {
-            console.error('BG3 HUD D&D 5e | Error opening auto-populate config:', error);
-            ui.notifications.error('Failed to open configuration dialog');
-        }
-    }
-}
 
 /**
  * Wait for core to be ready, then register D&D 5e components
@@ -259,6 +177,51 @@ class DnD5eAdapter {
 
         console.log('D&D 5e Adapter | Executing macro:', macro.name);
         await macro.execute();
+    }
+
+    /**
+     * Auto-populate passives on token creation
+     * Selects all features that have no activities
+     * @param {Token} token - The newly created token
+     */
+    async autoPopulatePassives(token) {
+        const actor = token.actor;
+        if (!actor) return;
+
+        // Check if auto-populate passives is enabled
+        if (!game.settings.get(MODULE_ID, 'autoPopulatePassivesEnabled')) {
+            return;
+        }
+
+        // Get all feat items
+        const feats = actor.items.filter(item => item.type === 'feat');
+
+        // Filter to only features without activities
+        const passiveFeats = feats.filter(feat => {
+            const activities = feat.system?.activities;
+
+            // Check if activities exist and have content
+            if (activities instanceof Map) {
+                return activities.size === 0;
+            } else if (activities && typeof activities === 'object') {
+                if (Array.isArray(activities)) {
+                    return activities.length === 0;
+                } else {
+                    return Object.keys(activities).length === 0;
+                }
+            }
+
+            // Fallback: check legacy activation
+            if (feat.system?.activation?.type && feat.system.activation.type !== 'none') {
+                return false; // Has activation, not passive
+            }
+
+            return true; // No activities or activation, treat as passive
+        });
+
+        // Save the passive UUIDs to actor flags
+        const passiveUuids = passiveFeats.map(feat => feat.uuid);
+        await actor.setFlag(MODULE_ID, 'selectedPassives', passiveUuids);
     }
 
     /**

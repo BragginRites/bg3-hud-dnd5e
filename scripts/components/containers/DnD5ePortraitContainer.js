@@ -125,8 +125,6 @@ export async function createDnD5ePortraitContainer() {
         const deathSavesElement = await this.components.deathSaves.render();
         this.element.appendChild(deathSavesElement);
 
-        console.log('DnD5ePortraitContainer | Rendered with health:', health);
-
         return this.element;
     }
 
