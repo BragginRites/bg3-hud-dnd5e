@@ -1,6 +1,6 @@
 /**
- * D&D 5e Container Detection and Content Extraction
- * Provides methods for identifying containers and extracting their contents
+ * D&D 5e Container Detection, Content Extraction, and Persistence
+ * Provides methods for identifying containers, extracting their contents, and saving changes
  */
 
 /**
@@ -71,4 +71,42 @@ export async function getContainerContents(containerItem, actor) {
         cols: 5,
         items: items
     };
+}
+
+/**
+ * Save contents back to a D&D 5e container item
+ * @param {Item} containerItem - The container item
+ * @param {Object} items - Grid items object (slotKey: itemData)
+ * @param {Actor} actor - The actor that owns the container
+ * @returns {Promise<void>}
+ */
+export async function saveContainerContents(containerItem, items, actor) {
+    if (!containerItem) {
+        console.warn('DnD5eContainerPopover | No container item provided for save');
+        return;
+    }
+
+    // Convert grid items back to contents array
+    // Sort by slot position (row-col) to maintain order
+    const sortedSlots = Object.keys(items).sort((a, b) => {
+        const [colA, rowA] = a.split('-').map(Number);
+        const [colB, rowB] = b.split('-').map(Number);
+        if (rowA !== rowB) return rowA - rowB;
+        return colA - colB;
+    });
+
+    const contents = [];
+    for (const slotKey of sortedSlots) {
+        const itemData = items[slotKey];
+        if (itemData && itemData.uuid) {
+            contents.push(itemData.uuid);
+        }
+    }
+
+    // Update the container item's contents
+    await containerItem.update({
+        'system.contents': contents
+    });
+
+    console.log('DnD5eContainerPopover | Saved container contents:', contents);
 }

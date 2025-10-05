@@ -8,7 +8,7 @@ import { createDnD5ePassivesContainer } from './components/containers/DnD5ePassi
 import { DnD5eActionButtonsContainer } from './components/containers/DnD5eActionButtonsContainer.js';
 import { DnD5eFilterContainer } from './components/containers/DnD5eFilterContainer.js';
 import { createDnD5eWeaponSetContainer } from './components/containers/DnD5eWeaponSetContainer.js';
-import { isContainer, getContainerContents } from './components/containers/DnD5eContainerPopover.js';
+import { isContainer, getContainerContents, saveContainerContents } from './components/containers/DnD5eContainerPopover.js';
 import { DnD5eAutoSort } from './features/DnD5eAutoSort.js';
 import { DnD5eAutoPopulate } from './features/DnD5eAutoPopulate.js';
 import { registerSettings } from './utils/settings.js';
@@ -251,6 +251,18 @@ class DnD5eAdapter {
      */
     async getContainerContents(containerItem, actor) {
         return await getContainerContents(containerItem, actor);
+    }
+
+    /**
+     * Save contents back to a container item
+     * Delegates to DnD5eContainerPopover module
+     * @param {Item} containerItem - The container item
+     * @param {Object} items - Grid items object (slotKey: itemData)
+     * @param {Actor} actor - The actor who owns the container
+     * @returns {Promise<void>}
+     */
+    async saveContainerContents(containerItem, items, actor) {
+        return await saveContainerContents(containerItem, items, actor);
     }
 
     /**
