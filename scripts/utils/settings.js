@@ -4,6 +4,36 @@
 export function registerSettings() {
     const MODULE_ID = 'bg3-hud-dnd5e';
 
+    // Show item names setting
+    game.settings.register(MODULE_ID, 'showItemNames', {
+        name: 'Show Item Names',
+        hint: 'Display item names below each hotbar item',
+        scope: 'client',
+        config: true,
+        type: Boolean,
+        default: false,
+        onChange: () => {
+            if (ui.BG3HUD_APP) {
+                ui.BG3HUD_APP.updateDisplaySettings();
+            }
+        }
+    });
+
+    // Show item uses & quantity setting
+    game.settings.register(MODULE_ID, 'showItemUses', {
+        name: 'Show Item Uses & Quantity',
+        hint: 'Display remaining uses in the top-right corner and quantity in the top-left corner',
+        scope: 'client',
+        config: true,
+        type: Boolean,
+        default: true,
+        onChange: () => {
+            if (ui.BG3HUD_APP) {
+                ui.BG3HUD_APP.updateDisplaySettings();
+            }
+        }
+    });
+
     // Enable/disable auto-populate on token creation
     game.settings.register(MODULE_ID, 'autoPopulateEnabled', {
         name: 'Enable Auto-Populate on Token Creation',
@@ -75,8 +105,8 @@ class AutoPopulateConfigMenu extends FormApplication {
         }
 
         try {
-            // Import the dialog (fix the path - it's in modules folder)
-            const { AutoPopulateConfigDialog } = await import('../../bg3-hud-core/scripts/components/ui/AutoPopulateConfigDialog.js');
+            // Import the dialog from the core module
+            const { AutoPopulateConfigDialog } = await import('../../../bg3-hud-core/scripts/components/ui/AutoPopulateConfigDialog.js');
 
             const choices = await adapter.autoPopulate.getItemTypeChoices();
             const configuration = game.settings.get('bg3-hud-dnd5e', 'autoPopulateConfiguration');
@@ -91,7 +121,6 @@ class AutoPopulateConfigMenu extends FormApplication {
             if (result) {
                 // Save the new configuration
                 await game.settings.set('bg3-hud-dnd5e', 'autoPopulateConfiguration', result);
-                ui.notifications.info('Auto-populate configuration saved');
             }
         } catch (error) {
             console.error('BG3 HUD D&D 5e | Error opening auto-populate config:', error);

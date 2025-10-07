@@ -47,18 +47,27 @@ export async function getContainerContents(containerItem, actor) {
         const row = Math.floor(index / 5);
         const slotKey = `${col}-${row}`;
 
-        // Transform to cell data
-        items[slotKey] = {
-            uuid: item.uuid,
-            name: item.name,
-            img: item.img,
-            type: 'Item',
-            quantity: item.system?.quantity || 1,
-            uses: item.system?.uses ? {
-                value: item.system.uses.value || 0,
-                max: item.system.uses.max || 0
-            } : null
-        };
+        // Transform to cell data using adapter's transformation
+        const adapter = ui.BG3HOTBAR?.registry?.activeAdapter;
+        let cellData;
+        if (adapter && typeof adapter.transformItemToCellData === 'function') {
+            cellData = await adapter.transformItemToCellData(item);
+        } else {
+            // Fallback: manual transformation
+            cellData = {
+                uuid: item.uuid,
+                name: item.name,
+                img: item.img,
+                type: 'Item',
+                quantity: item.system?.quantity || 1,
+                uses: item.system?.uses ? {
+                    value: (item.system.uses.max - (item.system.uses.spent || 0)) || 0,
+                    max: item.system.uses.max || 0
+                } : null
+            };
+        }
+        
+        items[slotKey] = cellData;
 
         index++;
     }

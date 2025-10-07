@@ -131,19 +131,8 @@ class DnD5eAdapter {
 
         const items = [];
 
-        // Add D&D 5e specific menu items based on data type
-        if (data.type === 'Item') {
-            items.push({
-                label: 'Open Item Sheet',
-                icon: 'fas fa-book-open',
-                onClick: async () => {
-                    const item = await fromUuid(data.uuid);
-                    if (item) {
-                        item.sheet.render(true);
-                    }
-                }
-            });
-        }
+        // D&D 5e doesn't add extra context menu items
+        // The core context menu already provides "Edit Item" which opens the sheet
 
         return items;
     }
@@ -330,6 +319,82 @@ class DnD5eAdapter {
         if (!cellElement.dataset.actionType && item.system?.activation?.type) {
             cellElement.dataset.actionType = item.system.activation.type;
         }
+    }
+
+    /**
+     * Get display settings from the adapter
+     * Called by core to determine what display options to apply
+     * @returns {Object} Display settings object
+     */
+    getDisplaySettings() {
+        return {
+            showItemNames: game.settings.get(MODULE_ID, 'showItemNames'),
+            showItemUses: game.settings.get(MODULE_ID, 'showItemUses')
+        };
+    }
+
+    /**
+     * Transform a D&D 5e item to cell data format
+     * Extracts all relevant data including uses and quantity
+     * @param {Item} item - The item to transform
+     * @returns {Promise<Object>} Cell data object
+     */
+    async transformItemToCellData(item) {
+        if (!item) {
+            console.warn('DnD5e Adapter | transformItemToCellData: No item provided');
+            return null;
+        }
+
+        console.log(`DnD5e Adapter | Transforming item: ${item.name}`, {
+            hasSystem: !!item.system,
+            systemQuantity: item.system?.quantity,
+            systemUses: item.system?.uses,
+            fullItem: item
+        });
+
+        const cellData = {
+            uuid: item.uuid,
+            name: item.name,
+            img: item.img,
+            type: 'Item'
+        };
+
+        // Extract quantity (D&D 5e stores this in system.quantity)
+        if (item.system?.quantity) {
+            cellData.quantity = item.system.quantity;
+            console.log(`DnD5e Adapter | ✓ Extracted quantity: ${cellData.quantity}`);
+        } else {
+            console.log(`DnD5e Adapter | ✗ No quantity found in item.system.quantity`);
+        }
+
+        // Extract uses (D&D 5e stores this in system.uses)
+        if (item.system?.uses) {
+            console.log(`DnD5e Adapter | Found uses data:`, {
+                max: item.system.uses.max,
+                spent: item.system.uses.spent,
+                rawUses: item.system.uses
+            });
+
+            // Only include uses if max > 0
+            const maxUses = parseInt(item.system.uses.max) || 0;
+            if (maxUses > 0) {
+                const spentUses = parseInt(item.system.uses.spent) || 0;
+                const value = maxUses - spentUses;
+                
+                cellData.uses = {
+                    value: value,
+                    max: maxUses
+                };
+                console.log(`DnD5e Adapter | ✓ Extracted uses: ${value}/${maxUses}`);
+            } else {
+                console.log(`DnD5e Adapter | ✗ Uses max is 0 or invalid: ${item.system.uses.max}`);
+            }
+        } else {
+            console.log(`DnD5e Adapter | ✗ No uses found in item.system.uses`);
+        }
+
+        console.log(`DnD5e Adapter | Final cellData for ${item.name}:`, cellData);
+        return cellData;
     }
 }
 
