@@ -116,6 +116,4 @@ export async function saveContainerContents(containerItem, items, actor) {
     await containerItem.update({
         'system.contents': contents
     });
-
-    console.log('DnD5eContainerPopover | Saved container contents:', contents);
 }

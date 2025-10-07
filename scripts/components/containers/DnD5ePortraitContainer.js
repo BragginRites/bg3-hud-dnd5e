@@ -578,6 +578,17 @@ export async function createDnD5ePortraitContainer() {
             // Clear existing content
             this.element.innerHTML = '';
 
+            // Add info container (button + panel) if provided by core
+            // Place it before the portrait image so it sits above and is centered
+            if (this.infoContainer) {
+                try {
+                    const infoElement = await this.infoContainer.render();
+                    this.element.appendChild(infoElement);
+                } catch (e) {
+                    console.warn('DnD5ePortraitContainer | Failed to render info container', e);
+                }
+            }
+
             // Get health data
             const health = this.getHealth();
             const imageSrc = this.getPortraitImage();

@@ -8,6 +8,7 @@ import { createDnD5ePassivesContainer } from './components/containers/DnD5ePassi
 import { DnD5eActionButtonsContainer } from './components/containers/DnD5eActionButtonsContainer.js';
 import { DnD5eFilterContainer } from './components/containers/DnD5eFilterContainer.js';
 import { createDnD5eWeaponSetContainer } from './components/containers/DnD5eWeaponSetContainer.js';
+import { DnD5eInfoContainer } from './components/containers/DnD5eInfoContainer.js';
 import { isContainer, getContainerContents, saveContainerContents } from './components/containers/DnD5eContainerPopover.js';
 import { DnD5eAutoSort } from './features/DnD5eAutoSort.js';
 import { DnD5eAutoPopulate } from './features/DnD5eAutoPopulate.js';
@@ -62,6 +63,9 @@ Hooks.on('bg3HudReady', async (BG3HUD_API) => {
     
     // Register D&D 5e filter container (action types, spell slots)
     BG3HUD_API.registerFilterContainer(DnD5eFilterContainer);
+    
+    // Register D&D 5e info container (abilities, skills, saves)
+    BG3HUD_API.registerInfoContainer(DnD5eInfoContainer);
 
     // TODO: Register other D&D 5e specific components
     // BG3HUD_API.registerContainer('deathSaves', DeathSavesContainer);
@@ -345,13 +349,6 @@ class DnD5eAdapter {
             return null;
         }
 
-        console.log(`DnD5e Adapter | Transforming item: ${item.name}`, {
-            hasSystem: !!item.system,
-            systemQuantity: item.system?.quantity,
-            systemUses: item.system?.uses,
-            fullItem: item
-        });
-
         const cellData = {
             uuid: item.uuid,
             name: item.name,
@@ -362,19 +359,10 @@ class DnD5eAdapter {
         // Extract quantity (D&D 5e stores this in system.quantity)
         if (item.system?.quantity) {
             cellData.quantity = item.system.quantity;
-            console.log(`DnD5e Adapter | ✓ Extracted quantity: ${cellData.quantity}`);
-        } else {
-            console.log(`DnD5e Adapter | ✗ No quantity found in item.system.quantity`);
         }
 
         // Extract uses (D&D 5e stores this in system.uses)
         if (item.system?.uses) {
-            console.log(`DnD5e Adapter | Found uses data:`, {
-                max: item.system.uses.max,
-                spent: item.system.uses.spent,
-                rawUses: item.system.uses
-            });
-
             // Only include uses if max > 0
             const maxUses = parseInt(item.system.uses.max) || 0;
             if (maxUses > 0) {
@@ -385,15 +373,9 @@ class DnD5eAdapter {
                     value: value,
                     max: maxUses
                 };
-                console.log(`DnD5e Adapter | ✓ Extracted uses: ${value}/${maxUses}`);
-            } else {
-                console.log(`DnD5e Adapter | ✗ Uses max is 0 or invalid: ${item.system.uses.max}`);
             }
-        } else {
-            console.log(`DnD5e Adapter | ✗ No uses found in item.system.uses`);
         }
 
-        console.log(`DnD5e Adapter | Final cellData for ${item.name}:`, cellData);
         return cellData;
     }
 }
