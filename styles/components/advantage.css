@@ -1,0 +1,53 @@
+/* D&D 5e Advantage/Disadvantage Container Styles */
+
+#bg3-hotbar-container .bg3-adv-container {
+    display: flex;
+    flex-direction: column;
+    margin: 1px 0;
+    gap: 5px;
+}
+
+#bg3-hotbar-container .bg3-adv-container > * {
+    background: var(--bg3-background, rgba(40, 40, 40, 0.8));
+    border: var(--bg3-cell-border-width, 2px) solid var(--bg3-cell-border-color, rgba(255, 255, 255, 0.2));
+    border-radius: var(--bg3-cell-border-radius, 8px);
+    display: flex;
+    justify-content: center;
+    color: var(--bg3-text, #ddd);
+    font-size: 0.8em;
+    height: 79px;
+    transition: all 0.2s ease;
+    padding: 5px;
+    writing-mode: vertical-rl;
+    text-orientation: upright;
+    cursor: pointer;
+}
+
+/* Advantage button hover and active states */
+#bg3-hotbar-container .bg3-adv-container > :first-child:hover,
+#bg3-hotbar-container .bg3-adv-container[data-state="advBtn"][data-once="true"] > :first-child {
+    border-color: green;
+}
+
+#bg3-hotbar-container .bg3-adv-container[data-state="advBtn"][data-once="true"] > :first-child {
+    color: green;
+}
+
+#bg3-hotbar-container .bg3-adv-container[data-state="advBtn"][data-once="false"] > :first-child {
+    background-color: green;
+}
+
+/* Disadvantage button hover and active states */
+#bg3-hotbar-container .bg3-adv-container > :last-child:hover,
+#bg3-hotbar-container .bg3-adv-container[data-state="disBtn"][data-once="true"] > :last-child {
+    border-color: red;
+}
+
+#bg3-hotbar-container .bg3-adv-container[data-state="disBtn"][data-once="true"] > :last-child {
+    color: red;
+}
+
+#bg3-hotbar-container .bg3-adv-container[data-state="disBtn"][data-once="false"] > :last-child {
+    background-color: red;
+}
+

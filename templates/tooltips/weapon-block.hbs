@@ -1,0 +1,46 @@
+{{#if (or (not properties.length) (not (contains properties labels.activation)))}}
+<ul class="weapon-block unlist {{#if fullWidth}}full-width{{/if}}">
+    {{#unless (contains properties labels.activation)}}
+    <li>
+        <strong>{{ localize "DND5E.ItemActionType" }}:</strong>
+        <span class="value">{{ labels.activation }}</span>
+    </li>
+    {{/unless}}
+    {{#if labels.attacks.length}}
+    <li>
+        <strong>{{ localize "DND5E.Attack" }}:</strong>
+        <span class="value">
+            {{#each labels.attacks as | attack |}}
+                {{ attack.toHit }}
+                {{#unless @last}}|{{/unless}}
+            {{/each}}
+        </span>
+    </li>
+    {{/if}}
+    {{#if enrichDamage}}
+    {{#unless (contains properties "Damage")}}
+    <li>
+        <strong>{{ localize "DND5E.Damage" }}:</strong>
+        <span class="value">
+            {{{enrichDamage.value}}}
+        </span>
+    </li>
+    {{/unless}}
+    {{/if}}
+    {{#if labels.reach}}
+        <li>
+            <strong>{{ localize "DND5E.Item.Property.Reach" }}:</strong>
+            <span class="value">{{ labels.reach }}</span>
+        </li>
+    {{/if}}
+    {{#if labels.range}}
+    {{#unless (contains properties labels.range)}}
+        <li>
+            <strong>{{ localize "DND5E.Range" }}:</strong>
+            <span class="value">{{ labels.range }}</span>
+        </li>
+    {{/unless}}
+    {{/if}}
+</ul>
+{{/if}}
+

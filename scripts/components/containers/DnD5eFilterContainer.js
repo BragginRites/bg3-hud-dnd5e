@@ -1,4 +1,4 @@
-import { FilterContainer } from '../../../../bg3-hud-core/scripts/components/containers/FilterContainer.js';
+import { FilterContainer } from '/modules/bg3-hud-core/scripts/components/containers/FilterContainer.js';
 
 /**
  * D&D 5e Filter Container
@@ -14,6 +14,42 @@ export class DnD5eFilterContainer extends FilterContainer {
             ...options,
             getFilters: () => this.getD5eFilters()
         });
+    }
+
+    /**
+     * Check if actor has legendary actions
+     * @returns {boolean} True if actor has legendary actions
+     * @private
+     */
+    _hasLegendaryActions() {
+        if (!this.actor) return false;
+
+        // Check if actor has any items with legendary action type
+        // Check both old system (actionType) and new system (activities)
+        const hasLegendaryItems = this.actor.items.some(item => {
+            // Old system: check actionType
+            if (item.system?.actionType === 'legendary') return true;
+            
+            // New system: check activities
+            if (item.system?.activities) {
+                const activities = item.system.activities;
+                if (activities instanceof Map) {
+                    return Array.from(activities.values()).some(activity => 
+                        activity.type === 'legendary' || 
+                        activity.actionType === 'legendary'
+                    );
+                } else if (Array.isArray(activities)) {
+                    return activities.some(activity => 
+                        activity.type === 'legendary' || 
+                        activity.actionType === 'legendary'
+                    );
+                }
+            }
+            
+            return false;
+        });
+
+        return hasLegendaryItems;
     }
 
     /**
@@ -53,14 +89,17 @@ export class DnD5eFilterContainer extends FilterContainer {
             data: { actionType: 'reaction' }
         });
 
-        filters.push({
-            id: 'legendary',
-            label: 'Legendary Action',
-            symbol: 'fa-dragon',
-            classes: ['action-type-button'],
-            color: getComputedStyle(document.documentElement).getPropertyValue('--dnd5e-filter-legendary')?.trim() || '#ffd700',
-            data: { actionType: 'legendary' }
-        });
+        // Legendary action filter - only show if actor has legendary actions
+        if (this._hasLegendaryActions()) {
+            filters.push({
+                id: 'legendary',
+                label: 'Legendary Action',
+                symbol: 'fa-dragon',
+                classes: ['action-type-button'],
+                color: getComputedStyle(document.documentElement).getPropertyValue('--dnd5e-filter-legendary')?.trim() || '#ffd700',
+                data: { actionType: 'legendary' }
+            });
+        }
 
         filters.push({
             id: 'feature',

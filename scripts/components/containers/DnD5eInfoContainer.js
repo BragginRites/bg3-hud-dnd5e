@@ -1,4 +1,4 @@
-import { InfoContainer } from '../../../../bg3-hud-core/scripts/components/containers/InfoContainer.js';
+import { InfoContainer } from '/modules/bg3-hud-core/scripts/components/containers/InfoContainer.js';
 
 /**
  * D&D 5e Info Container
@@ -30,6 +30,38 @@ export class DnD5eInfoContainer extends InfoContainer {
         content.appendChild(savesColumn);
 
         return content;
+    }
+
+    /**
+     * Handle right-click on info button - roll initiative
+     * @param {MouseEvent} event - The context menu event
+     * @override
+     */
+    async onButtonRightClick(event) {
+        if (!this.actor) {
+            console.warn('DnD5e Info | No actor available for initiative roll');
+            return;
+        }
+
+        try {
+            // D&D5e v5+ initiative roll dialog
+            if (typeof this.actor.rollInitiativeDialog === 'function') {
+                // Use dialog method for v5+
+                await this.actor.rollInitiativeDialog({
+                    createCombatants: true,
+                    rerollInitiative: true
+                });
+            } else if (typeof this.actor.rollInitiative === 'function') {
+                // Fallback - try to force dialog by not passing event
+                await this.actor.rollInitiative({ 
+                    createCombatants: true,
+                    rerollInitiative: true
+                });
+            }
+        } catch (err) {
+            console.error('DnD5e Info | Initiative roll failed', err);
+            ui.notifications?.error('Failed to roll initiative');
+        }
     }
 
     /**
@@ -154,6 +186,11 @@ export class DnD5eInfoContainer extends InfoContainer {
     async renderSkills() {
         const column = this.createElement('div', ['bg3-info-skills']);
 
+        // Don't render any skills if no ability is selected
+        if (!this.selectedAbility) {
+            return column;
+        }
+
         // Header
         const header = this.createElement('div', ['bg3-info-section-header']);
         header.textContent = 'Skills';
@@ -182,7 +219,7 @@ export class DnD5eInfoContainer extends InfoContainer {
 
         for (const [skillId, skillData] of Object.entries(skills)) {
             // Only show skills related to selected ability
-            if (this.selectedAbility && skillData.ability !== this.selectedAbility) {
+            if (skillData.ability !== this.selectedAbility) {
                 continue;
             }
             const skill = this.actor.system.skills[skillId];
@@ -232,16 +269,21 @@ export class DnD5eInfoContainer extends InfoContainer {
     }
 
     /**
-     * Render saving throws
+     * Render checks and saves
      * @returns {Promise<HTMLElement>}
      * @private
      */
     async renderSaves() {
         const column = this.createElement('div', ['bg3-info-saves']);
 
+        // Don't render any checks/saves if no ability is selected
+        if (!this.selectedAbility) {
+            return column;
+        }
+
         // Header
         const header = this.createElement('div', ['bg3-info-section-header']);
-        header.textContent = 'Saving Throw';
+        header.textContent = 'Checks & Saves';
         column.appendChild(header);
 
         const abilities = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
@@ -255,12 +297,54 @@ export class DnD5eInfoContainer extends InfoContainer {
         };
 
         for (const abilityId of abilities) {
-            // Only show save for selected ability
-            if (this.selectedAbility && abilityId !== this.selectedAbility) {
+            // Only show for selected ability
+            if (abilityId !== this.selectedAbility) {
                 continue;
             }
             const ability = this.actor.system.abilities[abilityId];
             
+            // Ability Check
+            const checkDiv = this.createElement('div', ['bg3-info-check']);
+            
+            const checkNameSpan = this.createElement('span', ['bg3-info-check-name']);
+            checkNameSpan.textContent = `${abilityNames[abilityId]} Check`;
+            
+            const checkModifierSpan = this.createElement('span', ['bg3-info-check-modifier']);
+            const checkMod = ability?.mod ?? 0;
+            if (checkMod >= 0) {
+                checkModifierSpan.classList.add('positive');
+            }
+            checkModifierSpan.textContent = checkMod;
+            
+            // Click to roll ability check
+            this.addEventListener(checkDiv, 'click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                if (!this.actor?.system?.abilities?.[abilityId]) {
+                    console.warn('DnD5e Info | Ability data not ready for check', { abilityId });
+                    return;
+                }
+                
+                try {
+                    // v5+ API - pass event and modifier keys
+                    this.actor.rollAbilityCheck({
+                        ability: abilityId,
+                        event: e,
+                        advantage: e.altKey,
+                        disadvantage: e.ctrlKey,
+                        fastForward: e.shiftKey
+                    });
+                } catch (err) {
+                    console.error('DnD5e Info | Ability check roll failed', { abilityId, error: err });
+                }
+            });
+            
+            checkDiv.appendChild(checkNameSpan);
+            checkDiv.appendChild(checkModifierSpan);
+            column.appendChild(checkDiv);
+            
+            // Saving Throw
             // Calculate save bonus: ability mod + proficiency (if proficient)
             let saveValue = ability?.mod ?? 0;
             
@@ -273,14 +357,14 @@ export class DnD5eInfoContainer extends InfoContainer {
 
             const saveDiv = this.createElement('div', ['bg3-info-save']);
 
-            const nameSpan = this.createElement('span', ['bg3-info-save-name']);
-            nameSpan.textContent = abilityNames[abilityId];
+            const saveNameSpan = this.createElement('span', ['bg3-info-save-name']);
+            saveNameSpan.textContent = `${abilityNames[abilityId]} Save`;
 
-            const modifierSpan = this.createElement('span', ['bg3-info-save-modifier']);
+            const saveModifierSpan = this.createElement('span', ['bg3-info-save-modifier']);
             if (saveValue >= 0) {
-                modifierSpan.classList.add('positive');
+                saveModifierSpan.classList.add('positive');
             }
-            modifierSpan.textContent = saveValue;
+            saveModifierSpan.textContent = saveValue;
 
             // Click to roll saving throw (v5+ only)
             this.addEventListener(saveDiv, 'click', (e) => {
@@ -306,8 +390,8 @@ export class DnD5eInfoContainer extends InfoContainer {
                 }
             });
 
-            saveDiv.appendChild(nameSpan);
-            saveDiv.appendChild(modifierSpan);
+            saveDiv.appendChild(saveNameSpan);
+            saveDiv.appendChild(saveModifierSpan);
             column.appendChild(saveDiv);
         }
 

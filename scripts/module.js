@@ -9,12 +9,26 @@ import { DnD5eActionButtonsContainer } from './components/containers/DnD5eAction
 import { DnD5eFilterContainer } from './components/containers/DnD5eFilterContainer.js';
 import { createDnD5eWeaponSetContainer } from './components/containers/DnD5eWeaponSetContainer.js';
 import { DnD5eInfoContainer } from './components/containers/DnD5eInfoContainer.js';
+import { DnD5eAdvContainer } from './components/containers/DnD5eAdvContainer.js';
 import { isContainer, getContainerContents, saveContainerContents } from './components/containers/DnD5eContainerPopover.js';
 import { DnD5eAutoSort } from './features/DnD5eAutoSort.js';
 import { DnD5eAutoPopulate } from './features/DnD5eAutoPopulate.js';
 import { registerSettings } from './utils/settings.js';
+import { renderDnD5eTooltip } from './utils/tooltipRenderer.js';
+import { DnD5eMenuBuilder } from './components/menus/DnD5eMenuBuilder.js';
 
 const MODULE_ID = 'bg3-hud-dnd5e';
+const ADVANTAGE_ROLL_EVENTS = [
+    'dnd5e.preRollAttackV2',
+    'dnd5e.preRollSavingThrowV2',
+    'dnd5e.preRollSkillV2',
+    'dnd5e.preRollAbilityCheckV2',
+    'dnd5e.preRollConcentrationV2',
+    'dnd5e.preRollDeathSaveV2',
+    'dnd5e.preRollToolV2'
+];
+
+let advantageHooksRegistered = false;
 
 console.log('BG3 HUD D&D 5e | Loading adapter');
 
@@ -37,6 +51,16 @@ Hooks.on('bg3HudReady', async (BG3HUD_API) => {
         console.warn('BG3 HUD D&D 5e | Not running D&D 5e system, skipping registration');
         return;
     }
+
+    // Register Handlebars helpers for tooltip templates
+    Handlebars.registerHelper('contains', function(array, value) {
+        if (!array || !Array.isArray(array)) return false;
+        return array.includes(value) || array.some(item => String(item).includes(String(value)));
+    });
+
+    // Register Handlebars partials for tooltips
+    const weaponBlockTemplate = await fetch('modules/bg3-hud-dnd5e/templates/tooltips/weapon-block.hbs').then(r => r.text());
+    Handlebars.registerPartial('bg3-hud-dnd5e.weapon-block', weaponBlockTemplate);
 
     console.log('BG3 HUD D&D 5e | Registering D&D 5e components');
 
@@ -67,6 +91,9 @@ Hooks.on('bg3HudReady', async (BG3HUD_API) => {
     // Register D&D 5e info container (abilities, skills, saves)
     BG3HUD_API.registerInfoContainer(DnD5eInfoContainer);
 
+    // Register D&D 5e situational bonuses container (midi-qol integration)
+    BG3HUD_API.registerContainer('situationalBonuses', DnD5eAdvContainer);
+
     // TODO: Register other D&D 5e specific components
     // BG3HUD_API.registerContainer('deathSaves', DeathSavesContainer);
 
@@ -74,10 +101,31 @@ Hooks.on('bg3HudReady', async (BG3HUD_API) => {
     const adapter = new DnD5eAdapter();
     BG3HUD_API.registerAdapter(adapter);
 
+    // Register D&D 5e menu builder
+    BG3HUD_API.registerMenuBuilder('dnd5e', DnD5eMenuBuilder, { adapter: adapter });
+    console.log('BG3 HUD D&D 5e | Menu builder registered');
+
+    // Register D&D 5e tooltip renderer
+    const tooltipManager = BG3HUD_API.getTooltipManager();
+    if (!tooltipManager) {
+        console.error('BG3 HUD D&D 5e | TooltipManager not available, cannot register tooltip renderer');
+    } else {
+        BG3HUD_API.registerTooltipRenderer('dnd5e', renderDnD5eTooltip);
+        console.log('BG3 HUD D&D 5e | Tooltip renderer registered');
+        
+        if (tooltipManager.tooltipElement) {
+            tooltipManager.tooltipElement.id = 'tooltip';
+            console.log('BG3 HUD D&D 5e | Tooltip ID changed to #tooltip for dnd5e system compatibility');
+        }
+    }
+
     console.log('BG3 HUD D&D 5e | Registration complete');
     
     // Signal that adapter registration is complete
     Hooks.call('bg3HudRegistrationComplete');
+
+    // Register advantage/disadvantage hooks once
+    registerAdvantageHooks();
 });
 
 /**
@@ -380,3 +428,50 @@ class DnD5eAdapter {
     }
 }
 
+/**
+ * Register hook handlers that apply ADV/DIS state to dnd5e rolls
+ * Mirrors inspired hotbar behaviour but scoped to BG3 HUD core
+ */
+function registerAdvantageHooks() {
+    if (advantageHooksRegistered) return;
+
+    const handleRollAdvantage = async (rollConfig) => {
+        // Ensure midi-qol integration is active and setting enabled
+        if (!game.modules.get('midi-qol')?.active) return;
+        if (!game.settings.get(MODULE_ID, 'addAdvBtnsMidiQoL')) return;
+
+        const workflowActor = rollConfig?.workflow?.actor;
+        if (!workflowActor) return;
+
+        // Only apply when HUD is controlling this actor
+        const currentActor = ui.BG3HUD_APP?.currentActor;
+        if (!currentActor || currentActor !== workflowActor) return;
+
+        const state = workflowActor.getFlag(MODULE_ID, 'advState');
+        const once = workflowActor.getFlag(MODULE_ID, 'advOnce');
+
+        if (state === 'advBtn') {
+            rollConfig.advantage = true;
+        } else if (state === 'disBtn') {
+            rollConfig.disadvantage = true;
+        } else {
+            return;
+        }
+
+        if (once) {
+            const situationalBonuses = ui.BG3HUD_APP?.components?.situationalBonuses;
+            if (situationalBonuses && typeof situationalBonuses.clearState === 'function') {
+                await situationalBonuses.clearState();
+            } else {
+                await workflowActor.unsetFlag(MODULE_ID, 'advState');
+                await workflowActor.unsetFlag(MODULE_ID, 'advOnce');
+            }
+        }
+    };
+
+    for (const event of ADVANTAGE_ROLL_EVENTS) {
+        Hooks.on(event, handleRollAdvantage);
+    }
+
+    advantageHooksRegistered = true;
+}

@@ -1,4 +1,4 @@
-import { AutoPopulateFramework } from '../../../bg3-hud-core/scripts/features/AutoPopulateFramework.js';
+import { AutoPopulateFramework } from '/modules/bg3-hud-core/scripts/features/AutoPopulateFramework.js';
 
 /**
  * D&D 5e Auto Populate Implementation
@@ -69,8 +69,8 @@ export class DnD5eAutoPopulate extends AutoPopulateFramework {
                 continue;
             }
 
-            // Check if item has activities or is usable
-            if (!this._hasActivities(item)) {
+            // Spells bypass _hasActivities (v5.1 spells often have no activities)
+            if (item.type !== 'spell' && !this._hasActivities(item)) {
                 continue;
             }
 
@@ -121,20 +121,17 @@ export class DnD5eAutoPopulate extends AutoPopulateFramework {
      * @private
      */
     _isSpellUsable(actor, item) {
-        // dnd5e v5+: preparation info lives under system.preparation
-        const prep = item.system?.preparation ?? {};
-        const method = prep.mode;
-        const prepared = prep.prepared;
+        const sys = item.system ?? {};
 
-        // Always include these spell modes
-        const alwaysInclude = ['pact', 'atwill', 'innate', 'ritual', 'always'];
-        if (alwaysInclude.includes(method)) return true;
+        // New schema (DnD5e 5.1+), fallback to legacy preparation
+        const method = sys.method ?? sys.preparation?.mode;
+        const prepared = sys.prepared ?? sys.preparation?.prepared;
 
-        // For "prepared" spells, require prepared flag
+        const always = ['pact', 'atwill', 'innate', 'ritual', 'always'];
+        if (always.includes(method)) return true;
+
         if (method === 'prepared') return prepared === true;
 
-        // Default: if no explicit method, include if prepared flag is true; otherwise include
-        // cantrips and other free-use spells typically have a mode above
         return prepared === true;
     }
 
@@ -167,4 +164,3 @@ export class DnD5eAutoPopulate extends AutoPopulateFramework {
         return false;
     }
 }
-

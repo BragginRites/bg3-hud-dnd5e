@@ -1,4 +1,4 @@
-import { AutoSortFramework } from '../../../bg3-hud-core/scripts/features/AutoSortFramework.js';
+import { AutoSortFramework } from '/modules/bg3-hud-core/scripts/features/AutoSortFramework.js';
 
 /**
  * D&D 5e Auto Sort Implementation

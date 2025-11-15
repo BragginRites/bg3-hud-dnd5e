@@ -95,6 +95,8 @@ export async function createDnD5ePortraitContainer() {
 
                 // Death button (set HP and temp HP to 0)
                 const deathBtn = this.createElement('div', ['hp-control-death']);
+                // Mark as UI element to prevent system tooltips (dnd5e2, etc.) from showing
+                deathBtn.dataset.bg3Ui = 'true';
                 deathBtn.innerHTML = '<i class="fas fa-skull" data-tooltip="Set to 0 HP"></i>';
                 this.addEventListener(deathBtn, 'click', async (event) => {
                     event.preventDefault();
@@ -148,6 +150,8 @@ export async function createDnD5ePortraitContainer() {
 
                 // Full heal button
                 const fullBtn = this.createElement('div', ['hp-control-full']);
+                // Mark as UI element to prevent system tooltips (dnd5e2, etc.) from showing
+                fullBtn.dataset.bg3Ui = 'true';
                 fullBtn.innerHTML = '<i class="fas fa-heart" data-tooltip="Full Heal"></i>';
                 this.addEventListener(fullBtn, 'click', async (event) => {
                     event.preventDefault();
@@ -341,6 +345,8 @@ export async function createDnD5ePortraitContainer() {
 
             // Skull button (center)
             const skull = this.createElement('div', ['death-saves-skull']);
+            // Mark as UI element to prevent system tooltips (dnd5e2, etc.) from showing
+            skull.dataset.bg3Ui = 'true';
             skull.innerHTML = '<i class="fas fa-skull"></i>';
             skull.dataset.tooltip = 'Left Click: Roll Death Save<br>Shift: Fast Forward | Alt: Advantage | Ctrl: Disadvantage<br>Right Click: Reset';
             skull.dataset.tooltipDirection = 'UP';
@@ -553,11 +559,37 @@ export async function createDnD5ePortraitContainer() {
 
         /**
          * Get portrait image URL
-         * For now, uses token image. Future: add setting for actor portrait
+         * Defaults to token image unless explicitly set to use actor portrait
          * @returns {string} Image URL
          */
         getPortraitImage() {
-            return this.token?.document?.texture?.src || this.actor?.img || '';
+            // Check saved preference (undefined means use default: token image)
+            const useTokenImage = this.actor?.getFlag('bg3-hud-dnd5e', 'useTokenImage') ?? true;
+            
+            if (useTokenImage) {
+                return this.token?.document?.texture?.src || this.actor?.img || '';
+            } else {
+                return this.actor?.img || this.token?.document?.texture?.src || '';
+            }
+        }
+
+        /**
+         * Update image preference (toggle between token and portrait)
+         * @returns {Promise<void>}
+         */
+        async updateImagePreference() {
+            if (!this.actor) return;
+            
+            // Get current preference
+            const currentPreference = this.actor.getFlag('bg3-hud-dnd5e', 'useTokenImage') ?? true;
+            
+            // Toggle the preference
+            const newPreference = !currentPreference;
+            
+            // Save to actor flags
+            await this.actor.setFlag('bg3-hud-dnd5e', 'useTokenImage', newPreference);
+            
+            // The UpdateCoordinator will handle the re-render via _handleAdapterFlags
         }
 
         /**
@@ -620,6 +652,9 @@ export async function createDnD5ePortraitContainer() {
             portraitImageSubContainer.appendChild(healthOverlay);
             portraitImageContainer.appendChild(portraitImageSubContainer);
             this.element.appendChild(portraitImageContainer);
+
+            // Register context menu for portrait image (right-click to toggle token/portrait)
+            this._registerPortraitMenu(portraitImageContainer);
 
             // Add health text component
             this.components.health = new PortraitHealth({

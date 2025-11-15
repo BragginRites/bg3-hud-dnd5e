@@ -1,4 +1,4 @@
-import { ActionButtonsContainer } from '../../../../bg3-hud-core/scripts/components/containers/ActionButtonsContainer.js';
+import { ActionButtonsContainer } from '/modules/bg3-hud-core/scripts/components/containers/ActionButtonsContainer.js';
 
 /**
  * D&D 5e Action Buttons Container
