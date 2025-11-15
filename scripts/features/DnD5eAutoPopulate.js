@@ -123,16 +123,21 @@ export class DnD5eAutoPopulate extends AutoPopulateFramework {
     _isSpellUsable(actor, item) {
         const sys = item.system ?? {};
 
-        // New schema (DnD5e 5.1+), fallback to legacy preparation
-        const method = sys.method ?? sys.preparation?.mode;
-        const prepared = sys.prepared ?? sys.preparation?.prepared;
+        const method = sys.method ?? "";
+        const prepared = sys.prepared ?? 0;
 
-        const always = ['pact', 'atwill', 'innate', 'ritual', 'always'];
-        if (always.includes(method)) return true;
+        // Learned spells: allow only if prepared or always-prepared
+        if (method === "spell") {
+            return prepared !== 0;
+        }
 
-        if (method === 'prepared') return prepared === true;
+        // Any non-empty method is considered usable (pact, innate, atwill, etc.)
+        if (method !== "") {
+            return true;
+        }
 
-        return prepared === true;
+        // Empty method: not a usable spell
+        return false;
     }
 
     /**
