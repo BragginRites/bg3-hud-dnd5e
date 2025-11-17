@@ -68,7 +68,7 @@ jobs:
       - name: Create Module ZIP
         run: |
           # Zip everything in the repo except hidden folders/files we don't need
-          zip -r bg3-inspired-hotbar.zip . \
+          zip -r bg3-hud-dnd5e.zip . \
             -x "*.git*" \
                ".github*" \
                "*.vscode*"
@@ -80,7 +80,7 @@ jobs:
           name: Release ${{ steps.tag.outputs.tag }}
           body: ${{ env.CHANGELOG }}
           files: |
-            bg3-inspired-hotbar.zip
+            bg3-hud-dnd5e.zip
             module.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -88,8 +88,8 @@ jobs:
       - name: Publish to Foundry VTT
         run: |
           # Construct the manifest and notes URLs using the version
-          MANIFEST_URL="https://github.com/${{ github.repository }}/releases/download/v${{ env.VERSION }}/module.json"
-          NOTES_URL="https://github.com/${{ github.repository }}/releases/tag/v${{ env.VERSION }}"
+          MANIFEST_URL="https://github.com/${{ github.repository }}/releases/download/${{ env.VERSION }}/module.json"
+          NOTES_URL="https://github.com/${{ github.repository }}/releases/tag/${{ env.VERSION }}"
           
           # Create the release payload
           payload=$(cat <<EOF
