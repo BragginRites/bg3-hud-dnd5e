@@ -1,0 +1,281 @@
+/* ==========================================================================
+   D&D 5e Portrait Components
+   ========================================================================== */
+
+#bg3-hotbar-container .bg3-portrait-container {
+    position: absolute;
+    right: 100%;
+    bottom: var(--position-bottom, 10px);
+    width: var(--bg3-portrait-size, 120px);
+    min-width: 80px;
+    height: var(--bg3-portrait-size, 120px);
+    min-height: 80px;
+    overflow: visible;
+    display: block;
+    margin-right: 8px;
+    z-index: 200;
+}
+
+#bg3-hotbar-container .portrait-image-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    cursor: pointer;
+    border: none;
+    outline: none;
+    box-shadow: none;
+    border-radius: 50%;
+}
+
+#bg3-hotbar-container .portrait-image-subcontainer {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+#bg3-hotbar-container .portrait-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    border: none;
+    outline: none;
+    box-shadow: none;
+}
+
+/* ==========================================================================
+   Health Overlay (Red damage indicator)
+   ========================================================================== */
+
+#bg3-hotbar-container .health-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    pointer-events: none;
+    border-radius: 50%;
+}
+
+#bg3-hotbar-container .health-overlay .damage-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    transition: height 0.3s ease-out, opacity 0.3s ease-out;
+    background: rgba(255, 0, 0, 0.4);
+}
+
+/* ==========================================================================
+   Portrait Image Alpha Masking (from bg3-inspired-hotbar)
+   - Applies the token/portrait image alpha as a mask to its subcontainer
+   - Ensures the health overlay only fills opaque parts of the image
+   ========================================================================== */
+
+/* Enable alpha mask when data-bend-mode is true */
+#bg3-hotbar-container .portrait-image-subcontainer[data-bend-mode="true"] {
+    mask-image: var(--bend-img);
+    -webkit-mask-image: var(--bend-img);
+    mask-mode: alpha;
+    -webkit-mask-mode: alpha;
+    mask-repeat: no-repeat;
+    -webkit-mask-repeat: no-repeat;
+    mask-size: 100% 100%;
+}
+
+/* When using the mask, allow inner overflow for menus/tooltips */
+#bg3-hotbar-container .bg3-portrait-container.use-bend-mask .portrait-image-container {
+    overflow: visible;
+}
+
+/* When using the mask, do not force-radius the health overlay */
+#bg3-hotbar-container .bg3-portrait-container.use-bend-mask .health-overlay {
+    border-radius: 0;
+}
+
+/* Keep scaling centered so masked content grows from center */
+#bg3-hotbar-container .portrait-image-subcontainer {
+    transform-origin: center center;
+}
+
+/* ==========================================================================
+   HP Text Display
+   ========================================================================== */
+
+#bg3-hotbar-container .hp-text {
+    position: absolute;
+    bottom: 25px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #fff;
+    text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+    font-size: 1.2em;
+    font-weight: bold;
+    text-align: center;
+    width: 100%;
+    z-index: 20;
+}
+
+#bg3-hotbar-container .temp-hp-text {
+    color: #7bb3e8;
+    font-size: 1.2em;
+    margin-bottom: 0;
+    text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+}
+
+#bg3-hotbar-container .hp-label {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#bg3-hotbar-container .hp-label,
+#bg3-hotbar-container .hp-controls {
+    height: 1.75em;
+}
+
+/* ==========================================================================
+   HP Controls (shown on hover)
+   ========================================================================== */
+
+#bg3-hotbar-container .hp-controls {
+    align-items: center;
+    justify-content: center;
+    margin: 0 1rem;
+    display: none;
+}
+
+/* Show HP controls on portrait hover */
+#bg3-hotbar-container .bg3-portrait-container:has(.hp-controls):has(.portrait-image-container:hover) .hp-label,
+#bg3-hotbar-container .hp-text:hover .hp-label,
+#bg3-hotbar-container .hp-text[data-hp-locked="true"] .hp-label {
+    display: none;
+}
+
+#bg3-hotbar-container .bg3-portrait-container:has(.hp-controls):has(.portrait-image-container:hover) .hp-controls,
+#bg3-hotbar-container .hp-text:hover .hp-controls,
+#bg3-hotbar-container .hp-text[data-hp-locked="true"] .hp-controls {
+    display: flex;
+}
+
+#bg3-hotbar-container .hp-controls > * {
+    flex: 1;
+}
+
+#bg3-hotbar-container .hp-controls i {
+    font-size: larger;
+}
+
+#bg3-hotbar-container .hp-controls > .hp-control-death {
+    cursor: pointer;
+    padding-right: 0.25rem;
+}
+
+#bg3-hotbar-container .hp-controls > .hp-control-full {
+    cursor: pointer;
+    padding-left: 0.25rem;
+}
+
+#bg3-hotbar-container .hp-controls > .hp-control-death {
+    color: red;
+}
+
+#bg3-hotbar-container .hp-controls > .hp-control-full {
+    color: #74cf00;
+}
+
+#bg3-hotbar-container .hp-controls input {
+    background: url(../../../../../ui/parchment.jpg) repeat;
+    flex: 2;
+    text-align: center;
+    color: var(--color-text-dark-primary, #000);
+    border: 1px solid #666;
+    border-radius: 3px;
+    padding: 2px 4px;
+}
+
+#bg3-hotbar-container .hp-controls input:focus {
+    outline: 1px solid #fff;
+}
+
+/* ==========================================================================
+   Death Saves Container
+   ========================================================================== */
+
+#bg3-hotbar-container .bg3-death-saves-container {
+    position: absolute;
+    left: -30px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    z-index: 1;
+    opacity: 1;
+    transition: opacity 0.2s ease-in-out;
+}
+
+#bg3-hotbar-container .bg3-death-saves-container[style*="display: none"] {
+    opacity: 0;
+}
+
+#bg3-hotbar-container .death-saves-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+#bg3-hotbar-container .death-save-box {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #666;
+    border-radius: 4px;
+    background-color: rgba(80, 80, 80, 0.3);
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+#bg3-hotbar-container .death-save-box:hover {
+    transform: scale(1.1);
+    border-color: #888;
+    box-shadow: 0 0 5px rgba(255, 255, 255, 0.3);
+}
+
+#bg3-hotbar-container .death-save-box.success.marked {
+    background-color: rgba(0, 255, 0, 0.3);
+    border-color: #00ff00;
+    box-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
+}
+
+#bg3-hotbar-container .death-save-box.success:hover {
+    border-color: #00ff00;
+    box-shadow: 0 0 8px rgba(0, 255, 0, 0.7);
+}
+
+#bg3-hotbar-container .death-save-box.failure.marked {
+    background-color: rgba(255, 0, 0, 0.3);
+    border-color: #ff0000;
+    box-shadow: 0 0 5px rgba(255, 0, 0, 0.5);
+}
+
+#bg3-hotbar-container .death-save-box.failure:hover {
+    border-color: #ff0000;
+    box-shadow: 0 0 8px rgba(255, 0, 0, 0.7);
+}
+
+#bg3-hotbar-container .death-saves-skull {
+    color: #666;
+    font-size: 1.5em;
+    margin: 4px 0;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+#bg3-hotbar-container .death-saves-skull:hover {
+    color: #fff;
+    text-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
+    transform: scale(1.1);
+}

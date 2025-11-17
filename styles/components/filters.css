@@ -1,0 +1,16 @@
+/**
+ * D&D 5e Filter Colors & System-Specific Filter Styling
+ * System-specific filter color variables and styling
+ */
+
+/* Filter color variables (overrideable by user themes) */
+:root {
+  --dnd5e-filter-action: #2ecc71;
+  --dnd5e-filter-bonus: #e37d22;
+  --dnd5e-filter-reaction: #fe85f6;
+  --dnd5e-filter-legendary: #ffd700;
+  --dnd5e-filter-feature: #d15300;
+  --dnd5e-filter-spell: #3497d9;
+  --dnd5e-filter-cantrip: #3497d9;
+  --dnd5e-filter-pact: #7d3d97;
+}

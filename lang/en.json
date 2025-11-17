@@ -1,0 +1,9 @@
+{
+  "BG3HUD": {
+    "Rest": "Rest",
+    "RestTooltip": "Rest<br><span style='font-size: 0.85em; opacity: 0.8;'>Click: Choose rest type<br>Ctrl+Click: Short Rest<br>Alt+Click: Long Rest</span>",
+    "ChooseRestType": "Choose a rest type:",
+    "EndTurn": "End Turn"
+  }
+}
+

@@ -1,6 +1,6 @@
 {
     "id": "bg3-hud-dnd5e",
-    "title": "BG3 Inspired HUD - D&D 5e Integration",
+    "title": "BG3 Inspired HUD - D&D5e",
     "description": "A D&D 5e integration module for the BG3 Inspired HUD. This module adapts the core HUD functionality for the D&D 5e system, providing token-specific HUD elements for abilities, spells, and effects.",
     "version": "0.1.0",
     "authors": [
@@ -8,16 +8,11 @@
         "name": "BragginRites",
         "discord": "Braggin#1205",
         "flags": {}
-      },
-      {
-        "name": "Dapoulp",
-        "discord": "Poulp#3418",
-        "flags": {}
       }
     ],
     "compatibility": {
-      "minimum": "12",
-      "verified": "12"
+      "minimum": "13",
+      "verified": "13"
     },
     "esmodules": [
       "scripts/module.js"
@@ -29,52 +24,27 @@
       {
         "lang": "en",
         "name": "English",
-        "path": "lang/en.json",
-        "flags": {}
-      },
-      {
-        "lang": "pl",
-        "name": "Polski",
-        "path": "lang/pl.json",
-        "flags": {}
-      },
-      {
-        "lang": "fr",
-        "name": "Français",
-        "path": "lang/fr.json",
-        "flags": {}
-      },
-      {
-        "lang": "nl",
-        "name": "Nederlands",
-        "path": "lang/nl.json",
-        "flags": {}
-      },
-      {
-        "lang": "ru",
-        "name": "Русский",
-        "path": "lang/ru.json",
-        "flags": {}
+        "path": "lang/en.json"
       }
     ],
     "relationships": {
       "requires": [
         {
-          "id": "lib-wrapper",
+          "id": "bg3-hud-core",
           "type": "module",
-          "compatibility": {}
-        },
-        {
-          "id": "colorsettings",
-          "type": "module",
-          "compatibility": {}
+          "compatibility": {
+            "minimum": "0.1.0"
+          }
         }
       ],
       "systems": [
         {
           "id": "dnd5e",
           "type": "system",
-          "compatibility": {}
+          "compatibility": {
+            "minimum": "5",
+            "verified":"5.1.9"
+          }
         }
       ]
     },
@@ -83,18 +53,5 @@
     "manifest": "https://github.com/BragginRites/bg3-hud-dnd5e/releases/download/0.1.0/module.json",
     "download": "https://github.com/BragginRites/bg3-hud-dnd5e/releases/download/0.1.0/bg3-hud-dnd5e.zip",
     "readme": "README.md",
-    "bugs": "https://github.com/BragginRites/bg3-hud-dnd5e/issues",
-    "packs": [
-      {
-        "name": "bg3-inspired-hud",
-        "label": "BG3 Inspired HUD",
-        "path": "packs/bg3-inspired-hud",
-        "type": "Macro",
-        "ownership": {
-          "PLAYER": "NONE",
-          "ASSISTANT": "OWNER"
-        },
-        "system": "dnd5e"
-      }
-    ]
+    "bugs": "https://github.com/BragginRites/bg3-hud-dnd5e/issues"
   }
