@@ -1,0 +1,40 @@
+/* D&D 5e CPR Generic Actions Container Styles */
+
+#bg3-hotbar-container .bg3-cpr-generic-actions-container {
+    display: flex;
+    flex-direction: column;
+    margin: 1px 0;
+    gap: 5px;
+}
+
+#bg3-hotbar-container .bg3-cpr-generic-actions-container .cpr-generic-actions-btn {
+    background: var(--bg3-background-color, rgba(40, 40, 40, 0.8));
+    border: var(--bg3-border-size, 2px) solid var(--bg3-border-color, rgba(255, 255, 255, 0.2));
+    border-radius: var(--bg3-border-radius, 8px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: var(--bg3-text-color, #ddd);
+    font-size: 0.8em;
+    height: 163px; /* Match combined height of ADV + gap + DIS (79px + 5px + 79px) */
+    transition: all 0.2s ease;
+    padding: 5px;
+    writing-mode: vertical-rl;
+    text-orientation: upright;
+    cursor: pointer;
+    margin: 0;
+}
+
+#bg3-hotbar-container .bg3-cpr-generic-actions-container .cpr-generic-actions-btn:hover {
+    border-color: var(--bg3-border-color-hover, rgba(255, 255, 255, 0.4));
+    background-color: var(--bg3-background-color-hover, rgba(60, 60, 60, 0.9));
+    color: var(--bg3-text-color-hover, #fff);
+}
+
+#bg3-hotbar-container .bg3-cpr-generic-actions-container .cpr-generic-actions-btn:active {
+}
+
+#bg3-hotbar-container .bg3-cpr-generic-actions-container .cpr-generic-actions-label {
+    pointer-events: none;
+    white-space: nowrap;
+}

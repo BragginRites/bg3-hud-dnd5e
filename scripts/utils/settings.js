@@ -2,6 +2,37 @@ import { createSettingsSubmenu } from '/modules/bg3-hud-core/scripts/api/Setting
 
 const MODULE_ID = 'bg3-hud-dnd5e';
 
+/**
+ * Get CPR configuration based on D&D 5e rules version
+ * @returns {{packName: string, packId: string, isModern: boolean, settingsKey: string}}
+ */
+function getCPRConfig() {
+    // Check D&D 5e rules version setting
+    // "modern" = 2024 rules, "legacy" = 2014 rules
+    const rulesVersion = game.settings.get('dnd5e', 'rulesVersion');
+    const isModern = rulesVersion === 'modern';
+
+    if (isModern) {
+        return {
+            packName: 'CPRActions2024',
+            packId: 'chris-premades.CPRActions2024',
+            // 2024 default actions: Dash, Disengage, Dodge, Help, Hide, Ready
+            defaultActions: ['Dash', 'Disengage', 'Dodge', 'Help', 'Hide', 'Ready'],
+            isModern: true,
+            settingsKey: 'selectedCPRActionsModern'
+        };
+    } else {
+        return {
+            packName: 'CPRActions',
+            packId: 'chris-premades.CPRActions',
+            // 2014 default actions: Dash, Disengage, Dodge, Grapple, Help, Hide
+            defaultActions: ['Dash', 'Disengage', 'Dodge', 'Grapple', 'Help', 'Hide'],
+            isModern: false,
+            settingsKey: 'selectedCPRActionsLegacy'
+        };
+    }
+}
+
 const openAutoPopulateConfiguration = async () => {
   const adapter = ui.BG3HOTBAR?.registry?.activeAdapter;
   if (!adapter || !adapter.autoPopulate) {
@@ -37,6 +68,36 @@ const openAutoPopulateConfiguration = async () => {
   }
 };
 
+const openCPRActionsSelection = async () => {
+  // Check if CPR module is active
+  if (!game.modules.get('chris-premades')?.active) {
+    ui.notifications.warn(
+      game.i18n.localize(`${MODULE_ID}.Notifications.CPRModuleNotActive`)
+    );
+    return;
+  }
+
+  const { CPRActionsSelectionDialog } = await import(
+    '../components/ui/CPRActionsSelectionDialog.js'
+  );
+
+  // Get CPR config to determine which settings key to use
+  const cprConfig = getCPRConfig();
+  const currentSelection = game.settings.get(MODULE_ID, cprConfig.settingsKey) || [];
+
+  const result = await new CPRActionsSelectionDialog({
+    title: game.i18n.localize(`${MODULE_ID}.CPR.SelectActionsTitle`),
+    selectedActions: currentSelection,
+  }).render();
+
+  if (result) {
+    await game.settings.set(MODULE_ID, cprConfig.settingsKey, result);
+    ui.notifications.info(
+      game.i18n.localize(`${MODULE_ID}.Notifications.CPRActionsSelectionSaved`)
+    );
+  }
+};
+
 class AutoPopulateConfigMenu extends foundry.applications.api.ApplicationV2 {
   static DEFAULT_OPTIONS = {
     window: { frame: false, positioned: false, resizable: false, minimizable: false },
@@ -46,6 +107,19 @@ class AutoPopulateConfigMenu extends foundry.applications.api.ApplicationV2 {
 
   async render() {
     await openAutoPopulateConfiguration();
+    return this;
+  }
+}
+
+class CPRActionsSelectionMenu extends foundry.applications.api.ApplicationV2 {
+  static DEFAULT_OPTIONS = {
+    window: { frame: false, positioned: false, resizable: false, minimizable: false },
+    position: { width: 'auto', height: 'auto' },
+    tag: 'div',
+  };
+
+  async render() {
+    await openCPRActionsSelection();
     return this;
   }
 }
@@ -96,6 +170,62 @@ export function registerSettings() {
         default: true
     });
 
+    // CPR Generic Actions button setting (vertical button next to adv container)
+    game.settings.register(MODULE_ID, 'enableCPRGenericActions', {
+        name: `${MODULE_ID}.Settings.EnableCPRGenericActions`,
+        hint: `${MODULE_ID}.Settings.EnableCPRGenericActionsHint`,
+        scope: 'world',
+        config: false,
+        type: Boolean,
+        default: false
+    });
+
+    // CPR Actions auto-populate setting (populate action buttons on token creation)
+    game.settings.register(MODULE_ID, 'enableCPRActionsAutoPopulate', {
+        name: `${MODULE_ID}.Settings.EnableCPRActionsAutoPopulate`,
+        hint: `${MODULE_ID}.Settings.EnableCPRActionsAutoPopulateHint`,
+        scope: 'world',
+        config: false,
+        type: Boolean,
+        default: false
+    });
+
+    // Selected CPR Actions for Legacy/2014 rules (array of compendium UUIDs, max 6)
+    // Defaults: Dash, Disengage, Dodge, Grapple, Help, Hide
+    game.settings.register(MODULE_ID, 'selectedCPRActionsLegacy', {
+        name: `${MODULE_ID}.Settings.SelectedCPRActions`,
+        hint: `${MODULE_ID}.Settings.SelectedCPRActionsHint`,
+        scope: 'world',
+        config: false,
+        restricted: true,
+        type: Array,
+        default: []
+    });
+
+    // Selected CPR Actions for Modern/2024 rules (array of compendium UUIDs, max 6)
+    // Defaults: Dash, Disengage, Dodge, Help, Hide, Ready
+    game.settings.register(MODULE_ID, 'selectedCPRActionsModern', {
+        name: `${MODULE_ID}.Settings.SelectedCPRActions`,
+        hint: `${MODULE_ID}.Settings.SelectedCPRActionsHint`,
+        scope: 'world',
+        config: false,
+        restricted: true,
+        type: Array,
+        default: []
+    });
+
+    // Block CPR Generic Actions from being added to the hotbar
+    // Items from chris-premades.CPRActions compendium will be blocked
+    // Derived items (e.g., "Grapple: Escape" created after using "Grapple") are still allowed
+    game.settings.register(MODULE_ID, 'blockCPRActionsOnHotbar', {
+        name: `${MODULE_ID}.Settings.BlockCPRActionsOnHotbar`,
+        hint: `${MODULE_ID}.Settings.BlockCPRActionsOnHotbarHint`,
+        scope: 'world',
+        config: false,
+        type: Boolean,
+        default: true
+    });
+
     // Midi-QoL advantage/disadvantage buttons setting
     game.settings.register(MODULE_ID, 'addAdvBtnsMidiQoL', {
         name: `${MODULE_ID}.Settings.EnableAdvBtnsMidiQoL`,
@@ -110,6 +240,16 @@ export function registerSettings() {
     game.settings.register(MODULE_ID, 'autoPopulateEnabled', {
         name: `${MODULE_ID}.Settings.AutoPopulateOnTokenCreation`,
         hint: `${MODULE_ID}.Settings.AutoPopulateOnTokenCreationHint`,
+        scope: 'world',
+        config: false,
+        type: Boolean,
+        default: false
+    });
+
+    // Auto-populate player characters override setting
+    game.settings.register(MODULE_ID, 'autoPopulatePlayerCharacters', {
+        name: `${MODULE_ID}.Settings.AutoPopulatePlayerCharacters`,
+        hint: `${MODULE_ID}.Settings.AutoPopulatePlayerCharactersHint`,
         scope: 'world',
         config: false,
         type: Boolean,
@@ -144,15 +284,16 @@ export function registerSettings() {
         moduleId: MODULE_ID,
         titleKey: `${MODULE_ID}.Settings.AutoPopulate.MenuTitle`,
         sections: [
-            { legend: `${MODULE_ID}.Settings.AutoPopulate.Legend`, keys: ['autoPopulateEnabled', 'autoPopulatePassivesEnabled'] }
+            { legend: `${MODULE_ID}.Settings.AutoPopulate.Legend`, keys: ['autoPopulateEnabled', 'autoPopulatePlayerCharacters', 'autoPopulatePassivesEnabled'] }
         ]
     });
 
-    const MidiSettingsMenu = createSettingsSubmenu({
+    const ThirdPartySettingsMenu = createSettingsSubmenu({
         moduleId: MODULE_ID,
-        titleKey: `${MODULE_ID}.Settings.Midi.MenuTitle`,
+        titleKey: `${MODULE_ID}.Settings.ThirdParty.MenuTitle`,
         sections: [
-            { legend: `${MODULE_ID}.Settings.Midi.Legend`, keys: ['addAdvBtnsMidiQoL'] }
+            { legend: `${MODULE_ID}.Settings.ThirdParty.CPR.Legend`, keys: ['enableCPRGenericActions', 'enableCPRActionsAutoPopulate', 'blockCPRActionsOnHotbar'] },
+            { legend: `${MODULE_ID}.Settings.ThirdParty.Midi.Legend`, keys: ['addAdvBtnsMidiQoL'] }
         ]
     });
 
@@ -186,13 +327,23 @@ export function registerSettings() {
         restricted: true
     });
 
-    // Midi submenu
-    game.settings.registerMenu(MODULE_ID, 'midiSettingsMenu', {
-        name: `${MODULE_ID}.Settings.Midi.MenuName`,
-        label: `${MODULE_ID}.Settings.Midi.MenuLabel`,
-        hint: `${MODULE_ID}.Settings.Midi.MenuHint`,
-        icon: 'fas fa-list',
-        type: MidiSettingsMenu,
+    // Third-party modules submenu
+    game.settings.registerMenu(MODULE_ID, 'thirdPartySettingsMenu', {
+        name: `${MODULE_ID}.Settings.ThirdParty.MenuName`,
+        label: `${MODULE_ID}.Settings.ThirdParty.MenuLabel`,
+        hint: `${MODULE_ID}.Settings.ThirdParty.MenuHint`,
+        icon: 'fas fa-puzzle-piece',
+        type: ThirdPartySettingsMenu,
+        restricted: true
+    });
+
+    // CPR Actions selection menu
+    game.settings.registerMenu(MODULE_ID, 'cprActionsSelectionMenu', {
+        name: `${MODULE_ID}.CPR.SelectActionsMenuName`,
+        label: `${MODULE_ID}.CPR.SelectActionsMenuLabel`,
+        hint: `${MODULE_ID}.CPR.SelectActionsMenuHint`,
+        icon: 'fas fa-list-check',
+        type: CPRActionsSelectionMenu,
         restricted: true
     });
 }

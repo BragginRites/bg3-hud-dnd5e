@@ -19,10 +19,20 @@
       "ShowItemUsesHint": "Display remaining uses on items that have limited uses",
       "ShowHealthOverlay": "Show Health Overlay",
       "ShowHealthOverlayHint": "Display red damage overlay on portrait images",
+      "EnableCPRGenericActions": "Enable CPR Generic Actions Button",
+      "EnableCPRGenericActionsHint": "Show a vertical button next to the advantage container that triggers CPR's Generic Actions (2024) dialog",
+      "EnableCPRActionsAutoPopulate": "Enable CPR Actions Auto-Populate",
+      "EnableCPRActionsAutoPopulateHint": "Automatically populate quick access with CPR actions when tokens are created (uses 2014 or 2024 compendium based on D&D 5e Rules Version setting). If actions are manually selected, those take priority.",
+      "SelectedCPRActions": "Selected CPR Actions",
+      "SelectedCPRActionsHint": "Manually selected CPR actions to show in quick access (configure via 'Select CPR Actions' menu). Uses the compendium matching your D&D 5e Rules Version.",
+      "BlockCPRActionsOnHotbar": "Block CPR Actions on Hotbar",
+      "BlockCPRActionsOnHotbarHint": "Prevent CPR Generic Actions from being dragged onto the hotbar. Derived items like 'Grapple: Escape' are still allowed.",
       "EnableAdvBtnsMidiQoL": "Enable Advantage/Disadvantage Buttons (Midi-QoL)",
       "EnableAdvBtnsMidiQoLHint": "Add advantage/disadvantage buttons to the situational bonuses container when Midi-QoL is active",
       "AutoPopulateOnTokenCreation": "Auto-populate on Token Creation",
       "AutoPopulateOnTokenCreationHint": "Automatically populate hotbar grids with items when a token is created",
+      "AutoPopulatePlayerCharacters": "Allow Auto-populate for Player Characters",
+      "AutoPopulatePlayerCharactersHint": "⚠️ WARNING: This overrides the default behavior and allows auto-population for player characters. This is NOT recommended as players should have freedom to customize their own HUD. Only enable if you understand the implications.",
       "AutoPopulateConfigurationHint": "Configure which item types to auto-populate in each grid (restricted to GM)",
       "Display": {
         "MenuTitle": "Display Settings",
@@ -38,12 +48,17 @@
         "MenuHint": "Control automatic population of grids and passives",
         "Legend": "Auto-Populate"
       },
-      "Midi": {
-        "MenuTitle": "Midi-QoL Settings",
-        "MenuName": "Midi-QoL Settings",
-        "MenuLabel": "Midi-QoL Settings",
-        "MenuHint": "Enable or disable Midi-QoL advantage buttons",
-        "Legend": "Midi-QoL"
+      "ThirdParty": {
+        "MenuTitle": "Third-Party Modules",
+        "MenuName": "Third-Party Modules",
+        "MenuLabel": "Third-Party Modules",
+        "MenuHint": "Configure integration with third-party modules like CPR and Midi-QoL",
+        "CPR": {
+          "Legend": "Chris's Premades (CPR)"
+        },
+        "Midi": {
+          "Legend": "Midi-QoL"
+        }
       }
     },
     "AutoPopulate": {
@@ -142,6 +157,20 @@
       "ShortRest": "Short Rest",
       "LongRest": "Long Rest"
     },
+    "CPR": {
+      "GenericActionsButton": {
+        "Label": "ACTIONS",
+        "Tooltip": "Click to open CPR Generic Actions dialog"
+      },
+      "SelectActionsTitle": "Select CPR Generic Actions",
+      "SelectActionsDescription": "Select up to {max} CPR Generic Actions to show in quick access. Uses the compendium matching your D&D 5e Rules Version (2014/Legacy or 2024/Modern).",
+      "SelectActionsMenuName": "Select CPR Actions",
+      "SelectActionsMenuLabel": "Select CPR Actions",
+      "SelectActionsMenuHint": "Choose which CPR Generic Actions to display in quick access (up to 6, based on Rules Version)",
+      "NoActionsAvailable": "No CPR actions available. Make sure Chris's Premades module is installed and the appropriate CPRActions compendium exists for your Rules Version.",
+      "MaxSelectionsReached": "Maximum of {max} actions can be selected",
+      "SelectionCounter": "Selected: {current} / {max}"
+    },
     "Notifications": {
       "AutoPopulateSystemNotAvailable": "Auto-populate system not available",
       "NoItemTypesAvailable": "No item types available for configuration",
@@ -149,10 +178,17 @@
       "ItemNotFound": "Item not found",
       "ItemCannotBeUsed": "Item cannot be used",
       "MacroNotFound": "Macro not found",
+      "CPRGenericActionsNotFound": "CPR Generic Actions (2024) item not found. Make sure Chris's Premades module is installed and active.",
+      "CPRGenericActionsError": "Error using CPR Generic Actions",
+      "CPRModuleNotActive": "Chris's Premades module is not active. Please enable it to use CPR features.",
+      "CPRActionsSelectionSaved": "CPR actions selection saved",
+      "CPRActionNotFound": "CPR action not found",
+      "CPRActionError": "Error using CPR action",
       "ShortRestNotAvailable": "Short rest not available for this actor",
       "LongRestNotAvailable": "Long rest not available for this actor",
       "SlotOccupiedByTwoHandedWeapon": "This slot is occupied by a two-handed weapon",
-      "FailedToRollInitiative": "Failed to roll initiative"
+      "FailedToRollInitiative": "Failed to roll initiative",
+      "CPRActionBlockedFromHotbar": "CPR Generic Actions cannot be added to the hotbar. Use the Quick Access grid instead."
     }
   }
 }

@@ -10,6 +10,7 @@ import { DnD5eFilterContainer } from './components/containers/DnD5eFilterContain
 import { createDnD5eWeaponSetContainer } from './components/containers/DnD5eWeaponSetContainer.js';
 import { DnD5eInfoContainer } from './components/containers/DnD5eInfoContainer.js';
 import { DnD5eAdvContainer } from './components/containers/DnD5eAdvContainer.js';
+import { DnD5eCPRGenericActionsContainer } from './components/containers/DnD5eCPRGenericActionsContainer.js';
 import { isContainer, getContainerContents, saveContainerContents } from './components/containers/DnD5eContainerPopover.js';
 import { DnD5eAutoSort } from './features/DnD5eAutoSort.js';
 import { DnD5eAutoPopulate } from './features/DnD5eAutoPopulate.js';
@@ -94,6 +95,9 @@ Hooks.on('bg3HudReady', async (BG3HUD_API) => {
     // Register D&D 5e situational bonuses container (midi-qol integration)
     BG3HUD_API.registerContainer('situationalBonuses', DnD5eAdvContainer);
 
+    // Register D&D 5e CPR Generic Actions container
+    BG3HUD_API.registerContainer('cprGenericActions', DnD5eCPRGenericActionsContainer);
+
     // TODO: Register other D&D 5e specific components
     // BG3HUD_API.registerContainer('deathSaves', DeathSavesContainer);
 
@@ -121,6 +125,9 @@ Hooks.on('bg3HudReady', async (BG3HUD_API) => {
     }
 
     console.log('BG3 HUD D&D 5e | Registration complete');
+    
+    // Initialize default CPR actions if not set
+    await initializeDefaultCPRActions();
     
     // Signal that adapter registration is complete
     Hooks.call('bg3HudRegistrationComplete');
@@ -197,18 +204,77 @@ class DnD5eAdapter {
      * @private
      */
     async _useItem(uuid, event) {
-        const item = await fromUuid(uuid);
-        if (!item) {
+        const resolved = await fromUuid(uuid);
+        if (!resolved) {
             ui.notifications.warn(game.i18n.localize(`${MODULE_ID}.Notifications.ItemNotFound`));
             return;
         }
 
-        console.log('D&D 5e Adapter | Using item:', item.name);
+        // If this is an embedded item (already on the actor), use it directly.
+        // If it's from a compendium, we need to create a real embedded item so midi-qol can find it.
+        const isEmbedded = !!resolved.parent;
+        const actor =
+            resolved.parent ??
+            ui.BG3HUD_APP?.currentActor ??
+            canvas?.tokens?.controlled?.[0]?.actor ??
+            null;
+
+        if (!actor) {
+            ui.notifications.warn(game.i18n.localize(`${MODULE_ID}.Notifications.ItemCannotBeUsed`));
+            return;
+        }
+
+        let itemToUse = resolved;
+        let createdItemId = null;
+
+        // For compendium items, we must create a real embedded document (not temporary)
+        // so that midi-qol can find it in the actor's items collection during its workflow.
+        if (!isEmbedded) {
+            // Clone the item data and ensure it's properly migrated
+            const data = foundry.utils.deepClone(resolved.toObject());
+
+            // Ensure modern V13+ stats shape exists to avoid deprecated flags.exportSource access
+            if (!data._stats) {
+                data._stats = {};
+            }
+            if (data.flags?.exportSource && !data._stats.exportSource) {
+                data._stats.exportSource = data.flags.exportSource;
+                delete data.flags.exportSource;
+            }
+
+            // Let Foundry assign the id
+            delete data._id;
+
+            // Create a real embedded document - midi-qol requires the item to be in the collection
+            // We'll delete it after use to avoid cluttering the actor's inventory
+            const created = await actor.createEmbeddedDocuments('Item', [data]);
+            itemToUse = created?.[0] ?? null;
+            createdItemId = itemToUse?.id;
+        }
+
+        if (!itemToUse) {
+            ui.notifications.warn(game.i18n.localize(`${MODULE_ID}.Notifications.ItemNotFound`));
+            return;
+        }
+
+        console.log('D&D 5e Adapter | Using item:', itemToUse.name, isEmbedded ? '(embedded)' : '(from compendium)');
 
         // Use the item (D&D 5e v4+ uses .use() method)
-        if (typeof item.use === 'function') {
-            await item.use({ event });
+        if (typeof itemToUse.use === 'function') {
+            try {
+                await itemToUse.use({ event });
+            } finally {
+                // Clean up: delete the temporarily created item from the actor's inventory
+                // This runs even if item.use() throws, ensuring we don't leave orphan items
+                if (createdItemId && actor.items.has(createdItemId)) {
+                    await actor.deleteEmbeddedDocuments('Item', [createdItemId]);
+                }
+            }
         } else {
+            // Clean up if we created an item but can't use it
+            if (createdItemId && actor.items.has(createdItemId)) {
+                await actor.deleteEmbeddedDocuments('Item', [createdItemId]);
+            }
             ui.notifications.warn(game.i18n.localize(`${MODULE_ID}.Notifications.ItemCannotBeUsed`));
         }
     }
@@ -427,6 +493,88 @@ class DnD5eAdapter {
 
         return cellData;
     }
+
+    /**
+     * Check if an item should be blocked from being added to the hotbar
+     * Used by InteractionCoordinator to filter external drops
+     * @param {Item} item - The item to check
+     * @returns {Promise<{blocked: boolean, reason?: string}>} Whether the item should be blocked and why
+     */
+    async shouldBlockFromHotbar(item) {
+        if (!item) return { blocked: false };
+
+        // Check if blocking CPR Generic Actions is enabled
+        const blockCPRActions = game.settings.get(MODULE_ID, 'blockCPRActionsOnHotbar');
+        if (!blockCPRActions) return { blocked: false };
+
+        // Check if CPR module is active
+        if (!game.modules.get('chris-premades')?.active) return { blocked: false };
+
+        const uuid = item.uuid || '';
+
+        // Block the "Generic Actions" items from CPRMiscellaneous compendium (both 2014 and 2024 versions)
+        // These are the main Generic Actions dialog items
+        const genericActionsUuids = [
+            'Compendium.chris-premades.CPRMiscellaneous.Item.V0rdpb8WPmdYhAjc',  // Generic Actions (2014)
+            'Compendium.chris-premades.CPRMiscellaneous.Item.Iz2XtxLReLnXTDiI'   // Generic Actions (2024)
+        ];
+        if (genericActionsUuids.includes(uuid)) {
+            return {
+                blocked: true,
+                reason: game.i18n.localize(`${MODULE_ID}.Notifications.CPRActionBlockedFromHotbar`)
+            };
+        }
+
+        // Check if the item is from either CPRActions compendium (2014 or 2024)
+        // Compendium items have UUIDs like: Compendium.chris-premades.CPRActions.Item.xxx
+        // or Compendium.chris-premades.CPRActions2024.Item.xxx
+        if (uuid.startsWith('Compendium.chris-premades.CPRActions.') ||
+            uuid.startsWith('Compendium.chris-premades.CPRActions2024.')) {
+            return {
+                blocked: true,
+                reason: game.i18n.localize(`${MODULE_ID}.Notifications.CPRActionBlockedFromHotbar`)
+            };
+        }
+
+        // Check if the item was created from CPRActions compendium (for embedded items)
+        // These have the source compendium stored in flags or _stats
+        const sourceCompendium = item._stats?.compendiumSource || item.flags?.core?.sourceId || '';
+
+        // Block embedded Generic Actions items (imported from CPRMiscellaneous)
+        if (genericActionsUuids.some(gaUuid => sourceCompendium.includes(gaUuid.split('.').pop()))) {
+            return {
+                blocked: true,
+                reason: game.i18n.localize(`${MODULE_ID}.Notifications.CPRActionBlockedFromHotbar`)
+            };
+        }
+
+        if (sourceCompendium.includes('chris-premades.CPRActions') ||
+            sourceCompendium.includes('chris-premades.CPRActions2024')) {
+            // But allow derived items like "Grapple: Escape" which are created dynamically
+            // These typically have different flags or are created by CPR's automation
+            // Check if this is the original action (not a derived one)
+            const cprConfig = getCPRConfig();
+            const selectedActions = game.settings.get(MODULE_ID, cprConfig.settingsKey) || [];
+
+            // If the source matches one of our selected CPR actions, block it
+            // But derived items (created during gameplay) won't match exactly
+            const isSelectedAction = selectedActions.some(actionUuid => {
+                // Extract the item ID from the stored UUID
+                const actionId = actionUuid.split('.').pop();
+                const sourceId = sourceCompendium.split('.').pop();
+                return actionId === sourceId;
+            });
+
+            if (isSelectedAction) {
+                return {
+                    blocked: true,
+                    reason: game.i18n.localize(`${MODULE_ID}.Notifications.CPRActionBlockedFromHotbar`)
+                };
+            }
+        }
+
+        return { blocked: false };
+    }
 }
 
 /**
@@ -476,3 +624,246 @@ function registerAdvantageHooks() {
 
     advantageHooksRegistered = true;
 }
+
+/**
+ * Get CPR configuration based on D&D 5e rules version
+ * @returns {{packName: string, packId: string, defaultActions: string[], isModern: boolean, settingsKey: string}}
+ */
+function getCPRConfig() {
+    // Check D&D 5e rules version setting
+    // "modern" = 2024 rules, "legacy" = 2014 rules
+    const rulesVersion = game.settings.get('dnd5e', 'rulesVersion');
+    const isModern = rulesVersion === 'modern';
+
+    if (isModern) {
+        return {
+            packName: 'CPRActions2024',
+            packId: 'chris-premades.CPRActions2024',
+            // 2024 default actions: Dash, Disengage, Dodge, Help, Hide, Ready
+            defaultActions: ['Dash', 'Disengage', 'Dodge', 'Help', 'Hide', 'Ready'],
+            isModern: true,
+            settingsKey: 'selectedCPRActionsModern'
+        };
+    } else {
+        return {
+            packName: 'CPRActions',
+            packId: 'chris-premades.CPRActions',
+            // 2014 default actions: Dash, Disengage, Dodge, Grapple, Help, Hide
+            defaultActions: ['Dash', 'Disengage', 'Dodge', 'Grapple', 'Help', 'Hide'],
+            isModern: false,
+            settingsKey: 'selectedCPRActionsLegacy'
+        };
+    }
+}
+
+/**
+ * Initialize default CPR actions based on rules version
+ * Only sets defaults if the versioned selectedCPRActions setting is empty
+ */
+async function initializeDefaultCPRActions() {
+    // Check if CPR module is active
+    if (!game.modules.get('chris-premades')?.active) {
+        return;
+    }
+
+    const cprConfig = getCPRConfig();
+
+    // Check if already set for this rules version
+    const currentSelection = game.settings.get(MODULE_ID, cprConfig.settingsKey);
+    if (currentSelection && currentSelection.length > 0) {
+        return; // Already configured for this rules version
+    }
+
+    try {
+        const pack = game.packs.get(cprConfig.packId);
+        if (!pack) {
+            console.warn(`[bg3-hud-dnd5e] CPR pack ${cprConfig.packId} not found`);
+            return;
+        }
+
+        // Get pack index
+        const index = await pack.getIndex();
+
+        // Find UUIDs for default actions
+        const defaultUuids = [];
+        for (const actionName of cprConfig.defaultActions) {
+            const entry = Array.from(index.entries()).find(([id, data]) =>
+                data.name === actionName
+            );
+            if (entry) {
+                const [id] = entry;
+                defaultUuids.push(`Compendium.${cprConfig.packId}.Item.${id}`);
+            }
+        }
+
+        // Set defaults if we found any
+        if (defaultUuids.length > 0) {
+            await game.settings.set(MODULE_ID, cprConfig.settingsKey, defaultUuids);
+            console.log(`[bg3-hud-dnd5e] Initialized default CPR actions (${cprConfig.isModern ? '2024' : '2014'}): ${defaultUuids.length} actions`);
+        }
+    } catch (error) {
+        console.warn('[bg3-hud-dnd5e] Failed to initialize default CPR actions:', error);
+    }
+}
+
+/**
+ * Populate quickAccess grid with CPR actions
+ * @param {Actor} actor - The actor
+ * @param {Array<string>} actionUuids - Array of CPR action UUIDs (max 6)
+ * @returns {Promise<void>}
+ */
+/**
+ * Populate quickAccess grid with CPR actions
+ * @param {Actor} actor - The actor
+ * @param {Array<string>} actionUuids - Array of CPR action UUIDs (max 6)
+ * @returns {Promise<void>}
+ */
+async function populateQuickAccessWithCPRActions(actor, actionUuids) {
+    if (!actor || !actionUuids || actionUuids.length === 0) {
+        console.log('[bg3-hud-dnd5e] populateQuickAccessWithCPRActions: Skipping - no actor or action UUIDs');
+        return;
+    }
+    
+    try {
+        // Create temporary persistence manager for this actor
+        const { PersistenceManager } = await import('/modules/bg3-hud-core/scripts/managers/PersistenceManager.js');
+        const tempPersistence = new PersistenceManager();
+        tempPersistence.setToken(actor);
+        
+        // Load current state
+        let state = await tempPersistence.loadState();
+        
+        // Check if quickAccess already has items (don't overwrite user data or other auto-populations)
+        const existingItems = state.quickAccess?.grids?.[0]?.items || {};
+        const hasExistingItems = Object.keys(existingItems).length > 0;
+        
+        if (hasExistingItems) {
+            console.log(`[bg3-hud-dnd5e] populateQuickAccessWithCPRActions: Skipping - quickAccess already has ${Object.keys(existingItems).length} items`);
+            return; // Don't overwrite existing items
+        }
+        
+        console.log(`[bg3-hud-dnd5e] populateQuickAccessWithCPRActions: Populating with ${actionUuids.length} CPR actions for actor ${actor.name}`);
+        
+        // Ensure quickAccess structure exists
+        if (!state.quickAccess || !Array.isArray(state.quickAccess.grids)) {
+            state.quickAccess = { grids: [{ rows: 2, cols: 3, items: {} }] };
+        }
+        
+        const grid = state.quickAccess.grids[0];
+        if (!grid.items) {
+            grid.items = {};
+        }
+        
+        // Populate grid cells with CPR action UUIDs (up to 6, filling left to right, top to bottom)
+        // Slot keys use format "col-row" (e.g., "0-0", "1-0", "2-0", "0-1", "1-1", "2-1")
+        const maxActions = Math.min(actionUuids.length, 6);
+        const populatedSlots = [];
+        for (let i = 0; i < maxActions; i++) {
+            const row = Math.floor(i / grid.cols);
+            const col = i % grid.cols;
+            const slotKey = `${col}-${row}`; // Format: col-row (not row-col!)
+            
+            // Store cell data with UUID reference (compendium UUID)
+            grid.items[slotKey] = {
+                uuid: actionUuids[i],
+                type: 'Item',
+            };
+            populatedSlots.push(slotKey);
+        }
+        
+        // Save updated state
+        await tempPersistence.saveState(state);
+        
+        console.log(`[bg3-hud-dnd5e] Populated quickAccess with ${maxActions} CPR actions in slots: ${populatedSlots.join(', ')}`);
+        
+        // Delay before refreshing HUD (50ms after quickAccess population)
+        await new Promise(resolve => setTimeout(resolve, 50));
+        
+        // Refresh HUD if it's currently showing this actor
+        if (ui.BG3HUD_APP?.currentActor?.id === actor.id) {
+            await ui.BG3HUD_APP.refresh();
+        }
+    } catch (error) {
+        console.error('[bg3-hud-dnd5e] Error populating quickAccess with CPR actions:', error);
+    }
+}
+
+/**
+ * Hook into token creation to populate quickAccess with CPR actions
+ */
+Hooks.on('createToken', async (tokenDocument, options, userId) => {
+    // Only run for GMs or if the user created the token
+    if (!game.user.isGM && game.userId !== userId) return;
+
+    // Get actor directly from tokenDocument
+    const actor = tokenDocument.actor;
+    if (!actor) return;
+
+    // Check if CPR actions auto-populate is enabled
+    const enableAutoPopulate = game.settings.get(MODULE_ID, 'enableCPRActionsAutoPopulate');
+    if (!enableAutoPopulate) return;
+
+    // Check if CPR module is active
+    if (!game.modules.get('chris-premades')?.active) return;
+
+    // Wait for grids to finish populating
+    // Grids populate with 50ms delays between them, so wait for all grids + passives + buffer
+    // This ensures quickAccess populates after grid 0, grid 1, grid 2, and passives
+    await new Promise(resolve => setTimeout(resolve, 200));
+
+    try {
+        // Get CPR config for current rules version
+        const cprConfig = getCPRConfig();
+
+        // Get selected CPR actions for this rules version (these are the ones the GM chose)
+        const selectedActions = game.settings.get(MODULE_ID, cprConfig.settingsKey) || [];
+        if (selectedActions.length === 0) {
+            // If no actions selected, get actions based on rules version (fallback)
+            const pack = game.packs.get(cprConfig.packId);
+            if (!pack) {
+                console.warn(`[bg3-hud-dnd5e] ${cprConfig.packName} pack not found`);
+                return;
+            }
+
+            const index = await pack.getIndex();
+            const actions = Array.from(index.entries())
+                .map(([id, entry]) => ({
+                    id,
+                    uuid: `Compendium.${cprConfig.packId}.Item.${id}`,
+                    name: entry.name
+                }))
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .slice(0, 6);
+
+            const actionUuids = actions.map(a => a.uuid);
+            await populateQuickAccessWithCPRActions(actor, actionUuids);
+        } else {
+            // Use selected actions (respects GM's choices)
+            await populateQuickAccessWithCPRActions(actor, selectedActions.slice(0, 6));
+        }
+    } catch (error) {
+        console.error('[bg3-hud-dnd5e] Error populating CPR actions on token creation:', error);
+    }
+});
+
+/**
+ * Hook into token selection/change to populate quickAccess with selected CPR actions if empty
+ */
+Hooks.on('BG3HUD_TOKEN_CHANGED', async (token) => {
+    if (!token?.actor) return;
+
+    const actor = token.actor;
+
+    // Check if CPR module is active
+    if (!game.modules.get('chris-premades')?.active) return;
+
+    // Get CPR config for current rules version
+    const cprConfig = getCPRConfig();
+
+    // Get selected CPR actions for this rules version
+    const selectedActions = game.settings.get(MODULE_ID, cprConfig.settingsKey) || [];
+    if (selectedActions.length === 0) return;
+    
+    // Use populateQuickAccessWithCPRActions which checks for existing items
+    await populateQuickAccessWithCPRActions(actor, selectedActions.slice(0, 6));
+});

@@ -678,8 +678,10 @@ export async function createDnD5ePortraitContainer() {
             
             // Health overlay (red damage indicator) - check setting
             const showHealthOverlay = game.settings.get('bg3-hud-dnd5e', 'showHealthOverlay') ?? true;
+            let healthOverlay = null;
+
             if (showHealthOverlay) {
-                const healthOverlay = this.createElement('div', ['health-overlay']);
+                healthOverlay = this.createElement('div', ['health-overlay']);
                 const damageOverlay = this.createElement('div', ['damage-overlay']);
                 damageOverlay.style.height = `${health.damage}%`;
                 damageOverlay.style.opacity = '1';
@@ -690,21 +692,11 @@ export async function createDnD5ePortraitContainer() {
                 // Use the resolved img.src (absolute URL) and quote it for CSS parsing safety
                 portraitImageSubContainer.style.setProperty('--bend-img', `url("${img.src}")`);
                 this.element.classList.add('use-bend-mask');
-
-                portraitImageSubContainer.appendChild(healthOverlay);
-            }
-
-            // Apply alpha mask so overlays only affect non-transparent pixels of the image (only if health overlay is enabled)
-            if (showHealthOverlay) {
-                portraitImageSubContainer.setAttribute('data-bend-mode', 'true');
-                // Use the resolved img.src (absolute URL) and quote it for CSS parsing safety
-                portraitImageSubContainer.style.setProperty('--bend-img', `url("${img.src}")`);
-                this.element.classList.add('use-bend-mask');
             }
 
             // Assemble portrait image structure
             portraitImageSubContainer.appendChild(img);
-            if (showHealthOverlay) {
+            if (showHealthOverlay && healthOverlay) {
                 portraitImageSubContainer.appendChild(healthOverlay);
             }
             portraitImageContainer.appendChild(portraitImageSubContainer);

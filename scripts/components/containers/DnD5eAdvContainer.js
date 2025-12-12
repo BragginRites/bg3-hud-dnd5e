@@ -11,6 +11,7 @@ export class DnD5eAdvContainer extends BG3Component {
     constructor(options = {}) {
         super(options);
         this.actor = options.actor || null;
+        this.token = options.token || null;
     }
 
     /**
@@ -19,7 +20,7 @@ export class DnD5eAdvContainer extends BG3Component {
      */
     get visible() {
         return game.settings.get(MODULE_ID, 'addAdvBtnsMidiQoL') && 
-               game.modules.get("midi-qol")?.active;
+                          game.modules.get("midi-qol")?.active;
     }
 
     /**
