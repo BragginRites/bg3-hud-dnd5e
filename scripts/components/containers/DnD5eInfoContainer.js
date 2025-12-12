@@ -198,39 +198,26 @@ export class DnD5eInfoContainer extends InfoContainer {
         header.textContent = game.i18n.localize(`${MODULE_ID}.Info.Skills`);
         column.appendChild(header);
 
-        const skills = {
-            acr: { name: game.i18n.localize(`${MODULE_ID}.Info.SkillNames.Acrobatics`), ability: 'dex' },
-            ani: { name: game.i18n.localize(`${MODULE_ID}.Info.SkillNames.AnimalHandling`), ability: 'wis' },
-            arc: { name: game.i18n.localize(`${MODULE_ID}.Info.SkillNames.Arcana`), ability: 'int' },
-            ath: { name: game.i18n.localize(`${MODULE_ID}.Info.SkillNames.Athletics`), ability: 'str' },
-            dec: { name: game.i18n.localize(`${MODULE_ID}.Info.SkillNames.Deception`), ability: 'cha' },
-            his: { name: game.i18n.localize(`${MODULE_ID}.Info.SkillNames.History`), ability: 'int' },
-            ins: { name: game.i18n.localize(`${MODULE_ID}.Info.SkillNames.Insight`), ability: 'wis' },
-            itm: { name: game.i18n.localize(`${MODULE_ID}.Info.SkillNames.Intimidation`), ability: 'cha' },
-            inv: { name: game.i18n.localize(`${MODULE_ID}.Info.SkillNames.Investigation`), ability: 'int' },
-            med: { name: game.i18n.localize(`${MODULE_ID}.Info.SkillNames.Medicine`), ability: 'wis' },
-            nat: { name: game.i18n.localize(`${MODULE_ID}.Info.SkillNames.Nature`), ability: 'int' },
-            prc: { name: game.i18n.localize(`${MODULE_ID}.Info.SkillNames.Perception`), ability: 'wis' },
-            prf: { name: game.i18n.localize(`${MODULE_ID}.Info.SkillNames.Performance`), ability: 'cha' },
-            per: { name: game.i18n.localize(`${MODULE_ID}.Info.SkillNames.Persuasion`), ability: 'cha' },
-            rel: { name: game.i18n.localize(`${MODULE_ID}.Info.SkillNames.Religion`), ability: 'int' },
-            slt: { name: game.i18n.localize(`${MODULE_ID}.Info.SkillNames.SleightOfHand`), ability: 'dex' },
-            ste: { name: game.i18n.localize(`${MODULE_ID}.Info.SkillNames.Stealth`), ability: 'dex' },
-            sur: { name: game.i18n.localize(`${MODULE_ID}.Info.SkillNames.Survival`), ability: 'wis' }
-        };
+        // Use system config for skills (supports custom skills and future changes)
+        const skillsConfig = CONFIG.DND5E?.skills || {};
 
-        for (const [skillId, skillData] of Object.entries(skills)) {
+        for (const [skillId, skillConfig] of Object.entries(skillsConfig)) {
+            // Get the skill's associated ability from system config
+            const skillAbility = skillConfig.ability || this.actor.system.skills[skillId]?.ability;
+
             // Only show skills related to selected ability
-            if (skillData.ability !== this.selectedAbility) {
+            if (skillAbility !== this.selectedAbility) {
                 continue;
             }
+
             const skill = this.actor.system.skills[skillId];
             const total = skill?.total || 0;
 
             const skillDiv = this.createElement('div', ['bg3-info-skill']);
 
             const nameSpan = this.createElement('span', ['bg3-info-skill-name']);
-            nameSpan.textContent = skillData.name;
+            // Use system's localized label
+            nameSpan.textContent = skillConfig.label || skillId;
 
             const modifierSpan = this.createElement('span', ['bg3-info-skill-modifier']);
             if (total >= 0) {
@@ -242,12 +229,12 @@ export class DnD5eInfoContainer extends InfoContainer {
             this.addEventListener(skillDiv, 'click', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                
+
                 if (!this.actor?.system?.skills?.[skillId]) {
                     console.warn('DnD5e Info | Skill data not ready', { skillId });
                     return;
                 }
-                
+
                 try {
                     // v5+ API - pass event and modifier keys
                     this.actor.rollSkill({

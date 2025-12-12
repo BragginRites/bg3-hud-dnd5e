@@ -1,68 +1,83 @@
-/**
- * Auto-populate Configuration Menu
- * FormApplication that directly opens the existing AutoPopulateConfigDialog
- */
+import { createSettingsSubmenu } from '/modules/bg3-hud-core/scripts/api/SettingsSubmenu.js';
+
 const MODULE_ID = 'bg3-hud-dnd5e';
 
-class AutoPopulateConfigMenu extends FormApplication {
-    static get defaultOptions() {
-        return foundry.utils.mergeObject(super.defaultOptions, {
-            id: 'bg3-hud-auto-populate-config',
-            title: game.i18n.localize(`${MODULE_ID}.Settings.AutoPopulateConfiguration`),
-            width: 0,
-            height: 0,
-            closeOnSubmit: true
-        });
-    }
+const openAutoPopulateConfiguration = async () => {
+  const adapter = ui.BG3HOTBAR?.registry?.activeAdapter;
+  if (!adapter || !adapter.autoPopulate) {
+    ui.notifications.error(
+      game.i18n.localize(`${MODULE_ID}.Notifications.AutoPopulateSystemNotAvailable`),
+    );
+    return;
+  }
 
-    async _render(force = false, options = {}) {
-        // Don't render anything - just open the dialog directly
-        
-        // Get the adapter's autoPopulate instance
-        const adapter = ui.BG3HOTBAR?.registry?.activeAdapter;
-        if (!adapter || !adapter.autoPopulate) {
-            ui.notifications.error(game.i18n.localize(`${MODULE_ID}.Notifications.AutoPopulateSystemNotAvailable`));
-            this.close();
-            return;
-        }
+  const currentConfig = game.settings.get(MODULE_ID, 'autoPopulateConfiguration');
+  const choices = await adapter.autoPopulate.getItemTypeChoices();
 
-        // Get current configuration
-        const currentConfig = game.settings.get(MODULE_ID, 'autoPopulateConfiguration');
-        
-        // Get item type choices from the adapter
-        const choices = await adapter.autoPopulate.getItemTypeChoices();
-        if (!choices || choices.length === 0) {
-            ui.notifications.warn(game.i18n.localize(`${MODULE_ID}.Notifications.NoItemTypesAvailable`));
-            this.close();
-            return;
-        }
+  if (!choices || choices.length === 0) {
+    ui.notifications.warn(game.i18n.localize(`${MODULE_ID}.Notifications.NoItemTypesAvailable`));
+    return;
+  }
 
-        // Close this form immediately
-        this.close();
+  const { AutoPopulateConfigDialog } = await import(
+    '/modules/bg3-hud-core/scripts/components/ui/AutoPopulateConfigDialog.js'
+  );
 
-        // Import and show the dialog directly
-        const { AutoPopulateConfigDialog } = await import('/modules/bg3-hud-core/scripts/components/ui/AutoPopulateConfigDialog.js');
-        
-        const dialog = new AutoPopulateConfigDialog({
-            title: game.i18n.localize(`${MODULE_ID}.Settings.ConfigureAutoPopulateGrids`),
-            choices: choices,
-            configuration: currentConfig
-        });
+  const result = await new AutoPopulateConfigDialog({
+    title: game.i18n.localize(`${MODULE_ID}.Settings.ConfigureAutoPopulateGrids`),
+    choices,
+    configuration: currentConfig,
+  }).render();
 
-        const result = await dialog.render();
-        
-        // Save if not cancelled
-        if (result) {
-            await game.settings.set(MODULE_ID, 'autoPopulateConfiguration', result);
-            ui.notifications.info(game.i18n.localize(`${MODULE_ID}.Notifications.AutoPopulateConfigurationSaved`));
-        }
-    }
+  if (result) {
+    await game.settings.set(MODULE_ID, 'autoPopulateConfiguration', result);
+    ui.notifications.info(
+      game.i18n.localize(`${MODULE_ID}.Notifications.AutoPopulateConfigurationSaved`),
+    );
+  }
+};
+
+class AutoPopulateConfigMenu extends foundry.applications.api.ApplicationV2 {
+  static DEFAULT_OPTIONS = {
+    window: { frame: false, positioned: false, resizable: false, minimizable: false },
+    position: { width: 'auto', height: 'auto' },
+    tag: 'div',
+  };
+
+  async render() {
+    await openAutoPopulateConfiguration();
+    return this;
+  }
 }
 
 /**
  * Register D&D 5e adapter module settings
  */
 export function registerSettings() {
+    const DisplaySettingsMenu = createSettingsSubmenu({
+        moduleId: MODULE_ID,
+        titleKey: `${MODULE_ID}.Settings.Display.MenuTitle`,
+        sections: [
+            { legend: `${MODULE_ID}.Settings.Display.Legend`, keys: ['showItemNames', 'showItemUses', 'showHealthOverlay'] }
+        ]
+    });
+
+    const AutoPopulateSettingsMenu = createSettingsSubmenu({
+        moduleId: MODULE_ID,
+        titleKey: `${MODULE_ID}.Settings.AutoPopulate.MenuTitle`,
+        sections: [
+            { legend: `${MODULE_ID}.Settings.AutoPopulate.Legend`, keys: ['autoPopulateEnabled', 'autoPopulatePassivesEnabled'] }
+        ]
+    });
+
+    const MidiSettingsMenu = createSettingsSubmenu({
+        moduleId: MODULE_ID,
+        titleKey: `${MODULE_ID}.Settings.Midi.MenuTitle`,
+        sections: [
+            { legend: `${MODULE_ID}.Settings.Midi.Legend`, keys: ['addAdvBtnsMidiQoL'] }
+        ]
+    });
+
     // Auto-populate configuration menu
     game.settings.registerMenu(MODULE_ID, 'autoPopulateConfigurationMenu', {
         name: `${MODULE_ID}.Settings.ConfigureAutoPopulateGrids`,
@@ -70,6 +85,36 @@ export function registerSettings() {
         hint: `${MODULE_ID}.Settings.ConfigureGridsHint`,
         icon: 'fas fa-grid-2',
         type: AutoPopulateConfigMenu,
+        restricted: true,
+    });
+
+    // Display submenu
+    game.settings.registerMenu(MODULE_ID, 'displaySettingsMenu', {
+        name: `${MODULE_ID}.Settings.Display.MenuName`,
+        label: `${MODULE_ID}.Settings.Display.MenuLabel`,
+        hint: `${MODULE_ID}.Settings.Display.MenuHint`,
+        icon: 'fas fa-list',
+        type: DisplaySettingsMenu,
+        restricted: true
+    });
+
+    // Auto-populate submenu
+    game.settings.registerMenu(MODULE_ID, 'autoPopulateSettingsMenu', {
+        name: `${MODULE_ID}.Settings.AutoPopulate.MenuName`,
+        label: `${MODULE_ID}.Settings.AutoPopulate.MenuLabel`,
+        hint: `${MODULE_ID}.Settings.AutoPopulate.MenuHint`,
+        icon: 'fas fa-list',
+        type: AutoPopulateSettingsMenu,
+        restricted: true
+    });
+
+    // Midi submenu
+    game.settings.registerMenu(MODULE_ID, 'midiSettingsMenu', {
+        name: `${MODULE_ID}.Settings.Midi.MenuName`,
+        label: `${MODULE_ID}.Settings.Midi.MenuLabel`,
+        hint: `${MODULE_ID}.Settings.Midi.MenuHint`,
+        icon: 'fas fa-list',
+        type: MidiSettingsMenu,
         restricted: true
     });
 
@@ -78,7 +123,7 @@ export function registerSettings() {
         name: `${MODULE_ID}.Settings.AutoPopulatePassives`,
         hint: `${MODULE_ID}.Settings.AutoPopulatePassivesHint`,
         scope: 'world',
-        config: true,
+        config: false,
         type: Boolean,
         default: true
     });
@@ -88,7 +133,7 @@ export function registerSettings() {
         name: `${MODULE_ID}.Settings.ShowItemNames`,
         hint: `${MODULE_ID}.Settings.ShowItemNamesHint`,
         scope: 'client',
-        config: true,
+        config: false,
         type: Boolean,
         default: false
     });
@@ -98,7 +143,17 @@ export function registerSettings() {
         name: `${MODULE_ID}.Settings.ShowItemUses`,
         hint: `${MODULE_ID}.Settings.ShowItemUsesHint`,
         scope: 'client',
-        config: true,
+        config: false,
+        type: Boolean,
+        default: true
+    });
+
+    // Show health overlay setting
+    game.settings.register(MODULE_ID, 'showHealthOverlay', {
+        name: `${MODULE_ID}.Settings.ShowHealthOverlay`,
+        hint: `${MODULE_ID}.Settings.ShowHealthOverlayHint`,
+        scope: 'client',
+        config: false,
         type: Boolean,
         default: true
     });
@@ -108,7 +163,7 @@ export function registerSettings() {
         name: `${MODULE_ID}.Settings.EnableAdvBtnsMidiQoL`,
         hint: `${MODULE_ID}.Settings.EnableAdvBtnsMidiQoLHint`,
         scope: 'world',
-        config: true,
+        config: false,
         type: Boolean,
         default: true
     });
@@ -118,7 +173,7 @@ export function registerSettings() {
         name: `${MODULE_ID}.Settings.AutoPopulateOnTokenCreation`,
         hint: `${MODULE_ID}.Settings.AutoPopulateOnTokenCreationHint`,
         scope: 'world',
-        config: true,
+        config: false,
         type: Boolean,
         default: false
     });

@@ -17,11 +17,34 @@
       "ShowItemNamesHint": "Display item names on hotbar cells",
       "ShowItemUses": "Show Item Uses",
       "ShowItemUsesHint": "Display remaining uses on items that have limited uses",
+      "ShowHealthOverlay": "Show Health Overlay",
+      "ShowHealthOverlayHint": "Display red damage overlay on portrait images",
       "EnableAdvBtnsMidiQoL": "Enable Advantage/Disadvantage Buttons (Midi-QoL)",
       "EnableAdvBtnsMidiQoLHint": "Add advantage/disadvantage buttons to the situational bonuses container when Midi-QoL is active",
       "AutoPopulateOnTokenCreation": "Auto-populate on Token Creation",
       "AutoPopulateOnTokenCreationHint": "Automatically populate hotbar grids with items when a token is created",
-      "AutoPopulateConfigurationHint": "Configure which item types to auto-populate in each grid (restricted to GM)"
+      "AutoPopulateConfigurationHint": "Configure which item types to auto-populate in each grid (restricted to GM)",
+      "Display": {
+        "MenuTitle": "Display Settings",
+        "MenuName": "Display Settings",
+        "MenuLabel": "Display Settings",
+        "MenuHint": "Toggle item names and uses on hotbar cells",
+        "Legend": "Display"
+      },
+      "AutoPopulate": {
+        "MenuTitle": "Auto-Populate Settings",
+        "MenuName": "Auto-Populate Settings",
+        "MenuLabel": "Auto-Populate Settings",
+        "MenuHint": "Control automatic population of grids and passives",
+        "Legend": "Auto-Populate"
+      },
+      "Midi": {
+        "MenuTitle": "Midi-QoL Settings",
+        "MenuName": "Midi-QoL Settings",
+        "MenuLabel": "Midi-QoL Settings",
+        "MenuHint": "Enable or disable Midi-QoL advantage buttons",
+        "Legend": "Midi-QoL"
+      }
     },
     "AutoPopulate": {
       "Groups": {
@@ -98,6 +121,8 @@
     "Menu": {
       "UseTokenImage": "Use Token Image",
       "UseCharacterPortrait": "Use Character Portrait",
+      "ScaleWithToken": "Scale with Token",
+      "ScaleWithTokenHint": "Scale the portrait image to match the token's scale",
       "Check": "Check",
       "Save": "Save"
     },

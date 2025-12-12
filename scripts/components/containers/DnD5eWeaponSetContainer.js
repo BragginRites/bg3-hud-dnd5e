@@ -164,5 +164,78 @@ export async function createDnD5eWeaponSetContainer() {
                 await this._updateSetTwoHandedWeapons(gridContainer);
             }
         }
+
+        /**
+         * Equip target set and unequip previously active set
+         * @param {number} setIndex
+         * @param {GridContainer} setContainer
+         */
+        async onSetSwitch(setIndex, setContainer) {
+            const actor = this.actor;
+            if (!actor) return;
+
+            const currentActiveIndex = this.getActiveSet();
+            const currentGrid = this.gridContainers[currentActiveIndex];
+
+            const resolveSetItems = async (grid) => {
+                if (!grid?.items) return [];
+                const items = [];
+                for (const slotKey of Object.keys(grid.items)) {
+                    const cellData = grid.items[slotKey];
+                    if (!cellData?.uuid || cellData.isTwoHandedDuplicate) continue;
+                    try {
+                        const item = await fromUuid(cellData.uuid);
+                        if (!item || item.actor?.id !== actor.id) continue;
+                        if (!this._isWeaponOrShield(item)) continue;
+                        items.push(item);
+                    } catch (error) {
+                        console.warn('BG3 HUD D&D 5e | Failed to resolve item for weapon set slot', slotKey, error);
+                    }
+                }
+                return items;
+            };
+
+            const [itemsToUnequip, itemsToEquip] = await Promise.all([
+                resolveSetItems(currentGrid),
+                resolveSetItems(setContainer),
+            ]);
+
+            const desiredStates = new Map();
+            for (const item of itemsToUnequip) {
+                desiredStates.set(item.id, { item, equipped: false });
+            }
+            for (const item of itemsToEquip) {
+                desiredStates.set(item.id, { item, equipped: true });
+            }
+
+            const updates = [];
+            for (const { item, equipped } of desiredStates.values()) {
+                const current = item.system?.equipped === true;
+                if (current !== equipped) {
+                    updates.push({ _id: item.id, 'system.equipped': equipped });
+                }
+            }
+
+            if (updates.length) {
+                await actor.updateEmbeddedDocuments('Item', updates);
+            }
+        }
+
+        /**
+         * Determine if an item should be managed by weapon sets
+         * @param {Item} item
+         * @returns {boolean}
+         * @private
+         */
+        _isWeaponOrShield(item) {
+            if (!item) return false;
+            if (item.type === 'weapon') return true;
+            if (item.type === 'equipment') {
+                const typeValue = item.system?.type?.value || item.system?.type;
+                const armorType = item.system?.armor?.type;
+                return typeValue === 'shield' || armorType === 'shield';
+            }
+            return false;
+        }
     };
 }

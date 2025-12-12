@@ -112,10 +112,11 @@ Hooks.on('bg3HudReady', async (BG3HUD_API) => {
     } else {
         BG3HUD_API.registerTooltipRenderer('dnd5e', renderDnD5eTooltip);
         console.log('BG3 HUD D&D 5e | Tooltip renderer registered');
-        
+
+        // Align tooltip element ID for dnd5e tooltip styling while relying on our blocker to prevent system tooltips on UI
         if (tooltipManager.tooltipElement) {
             tooltipManager.tooltipElement.id = 'tooltip';
-            console.log('BG3 HUD D&D 5e | Tooltip ID changed to #tooltip for dnd5e system compatibility');
+            console.log('BG3 HUD D&D 5e | Tooltip ID set to #tooltip for dnd5e styling');
         }
     }
 

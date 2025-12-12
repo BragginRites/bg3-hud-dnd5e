@@ -574,8 +574,50 @@ export async function createDnD5ePortraitContainer() {
         }
 
         /**
+         * Check if token scale should be applied to portrait
+         * @returns {boolean} True if scale should be applied
+         */
+        shouldScaleWithToken() {
+            if (!this.actor || !this.token) return false;
+            
+            const useTokenImage = this.actor.getFlag('bg3-hud-dnd5e', 'useTokenImage') ?? true;
+            const scaleWithToken = this.actor.getFlag('bg3-hud-dnd5e', 'scaleWithToken') ?? false;
+            
+            // Only scale if using token image and scale option is enabled
+            return useTokenImage && scaleWithToken;
+        }
+
+        /**
+         * Get the token scale value
+         * @returns {number} Token scale (default 1)
+         */
+        getTokenScale() {
+            return this.token?.document?._source?.texture?.scaleX ?? 1;
+        }
+
+        /**
+         * Apply token scale to portrait image
+         * @param {HTMLElement} subContainer - The portrait image subcontainer
+         */
+        applyTokenScale(subContainer) {
+            if (!subContainer) return;
+            
+            if (this.shouldScaleWithToken()) {
+                const scale = this.getTokenScale();
+                if (scale !== 1) {
+                    subContainer.style.setProperty('transform', `scale(${scale})`);
+                } else {
+                    subContainer.style.removeProperty('transform');
+                }
+            } else {
+                subContainer.style.removeProperty('transform');
+            }
+        }
+
+        /**
          * Update image preference (toggle between token and portrait)
          * @returns {Promise<void>}
+         * @deprecated Use actor.setFlag directly from menu builder
          */
         async updateImagePreference() {
             if (!this.actor) return;
@@ -634,24 +676,42 @@ export async function createDnD5ePortraitContainer() {
             img.src = imageSrc;
             img.alt = this.actor?.name || 'Portrait';
             
-            // Health overlay (red damage indicator)
-            const healthOverlay = this.createElement('div', ['health-overlay']);
-            const damageOverlay = this.createElement('div', ['damage-overlay']);
-            damageOverlay.style.height = `${health.damage}%`;
-            damageOverlay.style.opacity = '1';
-            healthOverlay.appendChild(damageOverlay);
+            // Health overlay (red damage indicator) - check setting
+            const showHealthOverlay = game.settings.get('bg3-hud-dnd5e', 'showHealthOverlay') ?? true;
+            if (showHealthOverlay) {
+                const healthOverlay = this.createElement('div', ['health-overlay']);
+                const damageOverlay = this.createElement('div', ['damage-overlay']);
+                damageOverlay.style.height = `${health.damage}%`;
+                damageOverlay.style.opacity = '1';
+                healthOverlay.appendChild(damageOverlay);
 
-            // Apply alpha mask so overlays only affect non-transparent pixels of the image
-            portraitImageSubContainer.setAttribute('data-bend-mode', 'true');
-            // Use the resolved img.src (absolute URL) and quote it for CSS parsing safety
-            portraitImageSubContainer.style.setProperty('--bend-img', `url("${img.src}")`);
-            this.element.classList.add('use-bend-mask');
+                // Apply alpha mask so overlays only affect non-transparent pixels of the image
+                portraitImageSubContainer.setAttribute('data-bend-mode', 'true');
+                // Use the resolved img.src (absolute URL) and quote it for CSS parsing safety
+                portraitImageSubContainer.style.setProperty('--bend-img', `url("${img.src}")`);
+                this.element.classList.add('use-bend-mask');
+
+                portraitImageSubContainer.appendChild(healthOverlay);
+            }
+
+            // Apply alpha mask so overlays only affect non-transparent pixels of the image (only if health overlay is enabled)
+            if (showHealthOverlay) {
+                portraitImageSubContainer.setAttribute('data-bend-mode', 'true');
+                // Use the resolved img.src (absolute URL) and quote it for CSS parsing safety
+                portraitImageSubContainer.style.setProperty('--bend-img', `url("${img.src}")`);
+                this.element.classList.add('use-bend-mask');
+            }
 
             // Assemble portrait image structure
             portraitImageSubContainer.appendChild(img);
-            portraitImageSubContainer.appendChild(healthOverlay);
+            if (showHealthOverlay) {
+                portraitImageSubContainer.appendChild(healthOverlay);
+            }
             portraitImageContainer.appendChild(portraitImageSubContainer);
             this.element.appendChild(portraitImageContainer);
+
+            // Apply token scale if enabled
+            this.applyTokenScale(portraitImageSubContainer);
 
             // Register context menu for portrait image (right-click to toggle token/portrait)
             this._registerPortraitMenu(portraitImageContainer);
@@ -690,9 +750,35 @@ export async function createDnD5ePortraitContainer() {
             const health = this.getHealth();
 
             // Update damage overlay height (just change the style, don't recreate)
+            const showHealthOverlay = game.settings.get('bg3-hud-dnd5e', 'showHealthOverlay') ?? true;
             const damageOverlay = this.element.querySelector('.damage-overlay');
-            if (damageOverlay) {
+            if (damageOverlay && showHealthOverlay) {
                 damageOverlay.style.height = `${health.damage}%`;
+            } else if (damageOverlay && !showHealthOverlay) {
+                // Remove overlay if setting is disabled
+                damageOverlay.remove();
+            } else if (!damageOverlay && showHealthOverlay) {
+                // Add overlay if setting is enabled and it doesn't exist
+                const portraitImageSubContainer = this.element.querySelector('.portrait-image-subcontainer');
+                if (portraitImageSubContainer) {
+                    const img = portraitImageSubContainer.querySelector('.portrait-image');
+                    if (img) {
+                        const healthOverlay = this.createElement('div', ['health-overlay']);
+                        const newDamageOverlay = this.createElement('div', ['damage-overlay']);
+                        newDamageOverlay.style.height = `${health.damage}%`;
+                        newDamageOverlay.style.opacity = '1';
+                        healthOverlay.appendChild(newDamageOverlay);
+
+                        portraitImageSubContainer.appendChild(healthOverlay);
+
+                        // Apply alpha mask if not already applied
+                        if (!portraitImageSubContainer.hasAttribute('data-bend-mode')) {
+                            portraitImageSubContainer.setAttribute('data-bend-mode', 'true');
+                            portraitImageSubContainer.style.setProperty('--bend-img', `url("${img.src}")`);
+                            this.element.classList.add('use-bend-mask');
+                        }
+                    }
+                }
             }
 
             // Update health text component (it has its own optimized update method)
