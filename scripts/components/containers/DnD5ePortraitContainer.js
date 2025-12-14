@@ -8,7 +8,7 @@ export async function createDnD5ePortraitContainer() {
     const { PortraitContainer } = await import('/modules/bg3-hud-core/scripts/components/containers/PortraitContainer.js');
     const BG3ComponentModule = await import('/modules/bg3-hud-core/scripts/components/BG3Component.js');
     const BG3Component = BG3ComponentModule.BG3Component;
-    
+
     /**
      * Portrait Health Component
      * Displays HP, temp HP, and optional HP controls for D&D 5e
@@ -36,14 +36,14 @@ export async function createDnD5ePortraitContainer() {
             if (this.parent && typeof this.parent.getHealth === 'function') {
                 return this.parent.getHealth();
             }
-            
+
             // Fallback: calculate directly
             const hpValue = this.actor.system.attributes?.hp?.value || 0;
             const hpMax = this.actor.system.attributes?.hp?.max || 1;
             const hpPercent = Math.max(0, Math.min(100, (hpValue / hpMax) * 100));
             const damagePercent = 100 - hpPercent;
             const tempHp = this.actor.system.attributes?.hp?.temp || 0;
-            
+
             return {
                 current: hpValue,
                 max: hpMax,
@@ -135,14 +135,14 @@ export async function createDnD5ePortraitContainer() {
 
                 this.addEventListener(hpInput, 'focusout', async (event) => {
                     const inputValue = event.currentTarget.value.trim();
-                    const {value, delta, isDelta} = this._parseAttributeInput(inputValue);
-                    
+                    const { value, delta, isDelta } = this._parseAttributeInput(inputValue);
+
                     await this.actor.modifyTokenAttribute('attributes.hp', isDelta ? delta : value, isDelta);
-                    
+
                     if (isDelta && event.target.value === inputValue) {
                         event.target.value = this.actor.system.attributes.hp.value;
                     }
-                    
+
                     this.element.dataset.hpLocked = 'false';
                 });
 
@@ -157,7 +157,7 @@ export async function createDnD5ePortraitContainer() {
                     event.preventDefault();
                     event.stopPropagation();
                     if (this.actor.system.attributes.hp.value < this.actor.system.attributes.hp.max) {
-                        await this.actor.update({'system.attributes.hp.value': this.actor.system.attributes.hp.max});
+                        await this.actor.update({ 'system.attributes.hp.value': this.actor.system.attributes.hp.max });
                     }
                 });
                 hpControlsDiv.appendChild(fullBtn);
@@ -245,7 +245,7 @@ export async function createDnD5ePortraitContainer() {
             // Return parsed input
             const value = isDelta ? current + v : v;
             const delta = isDelta ? v : undefined;
-            return {value, delta, isDelta};
+            return { value, delta, isDelta };
         }
     }
 
@@ -332,13 +332,13 @@ export async function createDnD5ePortraitContainer() {
                     box.classList.add('marked');
                 }
                 box.dataset.index = i;
-                
+
                 this.addEventListener(box, 'click', async (event) => {
                     event.preventDefault();
                     event.stopPropagation();
                     await this._onSuccessClick(i);
                 });
-                
+
                 successGroup.appendChild(box);
             }
             this.element.appendChild(successGroup);
@@ -350,19 +350,19 @@ export async function createDnD5ePortraitContainer() {
             skull.innerHTML = '<i class="fas fa-skull"></i>';
             skull.dataset.tooltip = 'Left Click: Roll Death Save<br>Shift: Fast Forward | Alt: Advantage | Ctrl: Disadvantage<br>Right Click: Reset';
             skull.dataset.tooltipDirection = 'UP';
-            
+
             this.addEventListener(skull, 'click', async (event) => {
                 event.preventDefault();
                 event.stopPropagation();
                 await this._onSkullClick(event);
             });
-            
+
             this.addEventListener(skull, 'contextmenu', async (event) => {
                 event.preventDefault();
                 event.stopPropagation();
                 await this._onSkullRightClick();
             });
-            
+
             this.element.appendChild(skull);
 
             // Failure boxes (3 boxes, filled from left to right)
@@ -373,13 +373,13 @@ export async function createDnD5ePortraitContainer() {
                     box.classList.add('marked');
                 }
                 box.dataset.index = i;
-                
+
                 this.addEventListener(box, 'click', async (event) => {
                     event.preventDefault();
                     event.stopPropagation();
                     await this._onFailureClick(i);
                 });
-                
+
                 failureGroup.appendChild(box);
             }
             this.element.appendChild(failureGroup);
@@ -457,7 +457,7 @@ export async function createDnD5ePortraitContainer() {
          */
         async _onSuccessClick(index) {
             if (!this.actor || this.actor.type !== 'character') return;
-            
+
             const newSuccesses = index + 1;
             await this.actor.update({
                 'system.attributes.death.success': newSuccesses
@@ -471,7 +471,7 @@ export async function createDnD5ePortraitContainer() {
          */
         async _onFailureClick(index) {
             if (!this.actor || this.actor.type !== 'character') return;
-            
+
             const newFailures = index + 1;
             await this.actor.update({
                 'system.attributes.death.failure': newFailures
@@ -517,7 +517,7 @@ export async function createDnD5ePortraitContainer() {
             });
         }
     }
-    
+
     /**
      * D&D 5e Portrait Container
      * Extends the core PortraitContainer with D&D 5e specific features:
@@ -547,7 +547,7 @@ export async function createDnD5ePortraitContainer() {
             const hpPercent = Math.max(0, Math.min(100, (hpValue / hpMax) * 100));
             const damagePercent = 100 - hpPercent;
             const tempHp = this.actor.system.attributes?.hp?.temp || 0;
-            
+
             return {
                 current: hpValue,
                 max: hpMax,
@@ -565,7 +565,7 @@ export async function createDnD5ePortraitContainer() {
         getPortraitImage() {
             // Check saved preference (undefined means use default: token image)
             const useTokenImage = this.actor?.getFlag('bg3-hud-dnd5e', 'useTokenImage') ?? true;
-            
+
             if (useTokenImage) {
                 return this.token?.document?.texture?.src || this.actor?.img || '';
             } else {
@@ -579,10 +579,10 @@ export async function createDnD5ePortraitContainer() {
          */
         shouldScaleWithToken() {
             if (!this.actor || !this.token) return false;
-            
+
             const useTokenImage = this.actor.getFlag('bg3-hud-dnd5e', 'useTokenImage') ?? true;
             const scaleWithToken = this.actor.getFlag('bg3-hud-dnd5e', 'scaleWithToken') ?? false;
-            
+
             // Only scale if using token image and scale option is enabled
             return useTokenImage && scaleWithToken;
         }
@@ -601,7 +601,7 @@ export async function createDnD5ePortraitContainer() {
          */
         applyTokenScale(subContainer) {
             if (!subContainer) return;
-            
+
             if (this.shouldScaleWithToken()) {
                 const scale = this.getTokenScale();
                 if (scale !== 1) {
@@ -621,16 +621,16 @@ export async function createDnD5ePortraitContainer() {
          */
         async updateImagePreference() {
             if (!this.actor) return;
-            
+
             // Get current preference
             const currentPreference = this.actor.getFlag('bg3-hud-dnd5e', 'useTokenImage') ?? true;
-            
+
             // Toggle the preference
             const newPreference = !currentPreference;
-            
+
             // Save to actor flags
             await this.actor.setFlag('bg3-hud-dnd5e', 'useTokenImage', newPreference);
-            
+
             // The UpdateCoordinator will handle the re-render via _handleAdapterFlags
         }
 
@@ -670,12 +670,12 @@ export async function createDnD5ePortraitContainer() {
             // Build portrait structure
             const portraitImageContainer = this.createElement('div', ['portrait-image-container']);
             const portraitImageSubContainer = this.createElement('div', ['portrait-image-subcontainer']);
-            
+
             // Portrait image
             const img = this.createElement('img', ['portrait-image']);
             img.src = imageSrc;
             img.alt = this.actor?.name || 'Portrait';
-            
+
             // Health overlay (red damage indicator) - check setting
             const showHealthOverlay = game.settings.get('bg3-hud-dnd5e', 'showHealthOverlay') ?? true;
             let healthOverlay = null;
@@ -700,6 +700,10 @@ export async function createDnD5ePortraitContainer() {
                 portraitImageSubContainer.appendChild(healthOverlay);
             }
             portraitImageContainer.appendChild(portraitImageSubContainer);
+
+            // Add portrait data badges (from core PortraitContainer)
+            await this._renderPortraitData(portraitImageContainer);
+
             this.element.appendChild(portraitImageContainer);
 
             // Apply token scale if enabled
@@ -800,6 +804,6 @@ export async function createDnD5ePortraitContainer() {
             super.destroy();
         }
     }
-    
+
     return DnD5ePortraitContainer;
 }

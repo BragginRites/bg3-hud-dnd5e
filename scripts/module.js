@@ -14,6 +14,7 @@ import { DnD5eCPRGenericActionsContainer } from './components/containers/DnD5eCP
 import { isContainer, getContainerContents, saveContainerContents } from './components/containers/DnD5eContainerPopover.js';
 import { DnD5eAutoSort } from './features/DnD5eAutoSort.js';
 import { DnD5eAutoPopulate } from './features/DnD5eAutoPopulate.js';
+import { DnD5eCPRAutoPopulate } from './features/DnD5eCPRAutoPopulate.js';
 import { registerSettings } from './utils/settings.js';
 import { renderDnD5eTooltip } from './utils/tooltipRenderer.js';
 import { DnD5eMenuBuilder } from './components/menus/DnD5eMenuBuilder.js';
@@ -46,7 +47,7 @@ Hooks.once('init', () => {
  */
 Hooks.on('bg3HudReady', async (BG3HUD_API) => {
     console.log('BG3 HUD D&D 5e | Received bg3HudReady hook');
-    
+
     // Verify we're in D&D 5e system
     if (game.system.id !== 'dnd5e') {
         console.warn('BG3 HUD D&D 5e | Not running D&D 5e system, skipping registration');
@@ -54,7 +55,7 @@ Hooks.on('bg3HudReady', async (BG3HUD_API) => {
     }
 
     // Register Handlebars helpers for tooltip templates
-    Handlebars.registerHelper('contains', function(array, value) {
+    Handlebars.registerHelper('contains', function (array, value) {
         if (!array || !Array.isArray(array)) return false;
         return array.includes(value) || array.some(item => String(item).includes(String(value)));
     });
@@ -67,28 +68,28 @@ Hooks.on('bg3HudReady', async (BG3HUD_API) => {
 
     // Create the portrait container class (extends core's PortraitContainer)
     const DnD5ePortraitContainer = await createDnD5ePortraitContainer();
-    
+
     // Create the passives container class (extends core's PassivesContainer)
     const DnD5ePassivesContainer = await createDnD5ePassivesContainer();
-    
+
     // Create the weapon set container class (extends core's WeaponSetContainer)
     const DnD5eWeaponSetContainer = await createDnD5eWeaponSetContainer();
-    
+
     // Register D&D 5e portrait container (includes health display)
     BG3HUD_API.registerPortraitContainer(DnD5ePortraitContainer);
-    
+
     // Register D&D 5e passives container (feat selection)
     BG3HUD_API.registerPassivesContainer(DnD5ePassivesContainer);
-    
+
     // Register D&D 5e weapon set container (two-handed weapon support)
     BG3HUD_API.registerWeaponSetContainer(DnD5eWeaponSetContainer);
-    
+
     // Register D&D 5e action buttons container (rest/turn buttons)
     BG3HUD_API.registerActionButtonsContainer(DnD5eActionButtonsContainer);
-    
+
     // Register D&D 5e filter container (action types, spell slots)
     BG3HUD_API.registerFilterContainer(DnD5eFilterContainer);
-    
+
     // Register D&D 5e info container (abilities, skills, saves)
     BG3HUD_API.registerInfoContainer(DnD5eInfoContainer);
 
@@ -125,10 +126,10 @@ Hooks.on('bg3HudReady', async (BG3HUD_API) => {
     }
 
     console.log('BG3 HUD D&D 5e | Registration complete');
-    
+
     // Initialize default CPR actions if not set
-    await initializeDefaultCPRActions();
-    
+    await adapter.cprAutoPopulate.initializeDefaultActions();
+
     // Signal that adapter registration is complete
     Hooks.call('bg3HudRegistrationComplete');
 
@@ -145,15 +146,32 @@ class DnD5eAdapter {
         this.MODULE_ID = MODULE_ID; // Expose for core to access
         this.systemId = 'dnd5e';
         this.name = 'D&D 5e Adapter';
-        
+
         // Initialize D&D 5e-specific features
         this.autoSort = new DnD5eAutoSort();
         this.autoPopulate = new DnD5eAutoPopulate();
-        
+        this.cprAutoPopulate = new DnD5eCPRAutoPopulate();
+
         // Link autoPopulate to autoSort for consistent sorting
         this.autoPopulate.setAutoSort(this.autoSort);
-        
-        console.log('BG3 HUD D&D 5e | DnD5eAdapter created with autoSort and autoPopulate');
+
+        console.log('BG3 HUD D&D 5e | DnD5eAdapter created with autoSort, autoPopulate, and cprAutoPopulate');
+    }
+
+    /**
+     * Get default portrait data configuration for D&D 5e
+     * Called by core when user hasn't configured portrait data yet
+     * @returns {Array<Object>} Default slot configurations
+     */
+    getPortraitDataDefaults() {
+        return [
+            { path: 'system.attributes.ac.value', icon: 'fas fa-shield-alt', color: '#4a90d9' },
+            { path: 'system.attributes.movement.walk', icon: 'fas fa-running', color: '#2ecc71' },
+            { path: '', icon: '', color: '#ffffff' },
+            { path: '', icon: '', color: '#ffffff' },
+            { path: '', icon: '', color: '#ffffff' },
+            { path: '', icon: '', color: '#ffffff' }
+        ];
     }
 
     /**
@@ -405,7 +423,7 @@ class DnD5eAdapter {
             // Activities is a Foundry Collection (Map-like), not a plain object
             // We need to iterate using Collection methods or convert to array
             let activityList = [];
-            
+
             // Check if it's a Collection with .contents property
             if (activities.contents) {
                 activityList = activities.contents;
@@ -418,7 +436,7 @@ class DnD5eAdapter {
             else if (typeof activities === 'object') {
                 activityList = Object.values(activities);
             }
-            
+
             for (const activity of activityList) {
                 if (activity?.activation?.type) {
                     actionTypes.add(activity.activation.type);
@@ -428,7 +446,7 @@ class DnD5eAdapter {
             // Store all action types as comma-separated list
             if (actionTypes.size > 0) {
                 cellElement.dataset.activityActionTypes = Array.from(actionTypes).join(',');
-                
+
                 // For backward compatibility, also set the first action type
                 cellElement.dataset.actionType = Array.from(actionTypes)[0];
             }
@@ -483,7 +501,7 @@ class DnD5eAdapter {
             if (maxUses > 0) {
                 const spentUses = parseInt(item.system.uses.spent) || 0;
                 const value = maxUses - spentUses;
-                
+
                 cellData.uses = {
                     value: value,
                     max: maxUses
@@ -626,169 +644,6 @@ function registerAdvantageHooks() {
 }
 
 /**
- * Get CPR configuration based on D&D 5e rules version
- * @returns {{packName: string, packId: string, defaultActions: string[], isModern: boolean, settingsKey: string}}
- */
-function getCPRConfig() {
-    // Check D&D 5e rules version setting
-    // "modern" = 2024 rules, "legacy" = 2014 rules
-    const rulesVersion = game.settings.get('dnd5e', 'rulesVersion');
-    const isModern = rulesVersion === 'modern';
-
-    if (isModern) {
-        return {
-            packName: 'CPRActions2024',
-            packId: 'chris-premades.CPRActions2024',
-            // 2024 default actions: Dash, Disengage, Dodge, Help, Hide, Ready
-            defaultActions: ['Dash', 'Disengage', 'Dodge', 'Help', 'Hide', 'Ready'],
-            isModern: true,
-            settingsKey: 'selectedCPRActionsModern'
-        };
-    } else {
-        return {
-            packName: 'CPRActions',
-            packId: 'chris-premades.CPRActions',
-            // 2014 default actions: Dash, Disengage, Dodge, Grapple, Help, Hide
-            defaultActions: ['Dash', 'Disengage', 'Dodge', 'Grapple', 'Help', 'Hide'],
-            isModern: false,
-            settingsKey: 'selectedCPRActionsLegacy'
-        };
-    }
-}
-
-/**
- * Initialize default CPR actions based on rules version
- * Only sets defaults if the versioned selectedCPRActions setting is empty
- */
-async function initializeDefaultCPRActions() {
-    // Check if CPR module is active
-    if (!game.modules.get('chris-premades')?.active) {
-        return;
-    }
-
-    const cprConfig = getCPRConfig();
-
-    // Check if already set for this rules version
-    const currentSelection = game.settings.get(MODULE_ID, cprConfig.settingsKey);
-    if (currentSelection && currentSelection.length > 0) {
-        return; // Already configured for this rules version
-    }
-
-    try {
-        const pack = game.packs.get(cprConfig.packId);
-        if (!pack) {
-            console.warn(`[bg3-hud-dnd5e] CPR pack ${cprConfig.packId} not found`);
-            return;
-        }
-
-        // Get pack index
-        const index = await pack.getIndex();
-
-        // Find UUIDs for default actions
-        const defaultUuids = [];
-        for (const actionName of cprConfig.defaultActions) {
-            const entry = Array.from(index.entries()).find(([id, data]) =>
-                data.name === actionName
-            );
-            if (entry) {
-                const [id] = entry;
-                defaultUuids.push(`Compendium.${cprConfig.packId}.Item.${id}`);
-            }
-        }
-
-        // Set defaults if we found any
-        if (defaultUuids.length > 0) {
-            await game.settings.set(MODULE_ID, cprConfig.settingsKey, defaultUuids);
-            console.log(`[bg3-hud-dnd5e] Initialized default CPR actions (${cprConfig.isModern ? '2024' : '2014'}): ${defaultUuids.length} actions`);
-        }
-    } catch (error) {
-        console.warn('[bg3-hud-dnd5e] Failed to initialize default CPR actions:', error);
-    }
-}
-
-/**
- * Populate quickAccess grid with CPR actions
- * @param {Actor} actor - The actor
- * @param {Array<string>} actionUuids - Array of CPR action UUIDs (max 6)
- * @returns {Promise<void>}
- */
-/**
- * Populate quickAccess grid with CPR actions
- * @param {Actor} actor - The actor
- * @param {Array<string>} actionUuids - Array of CPR action UUIDs (max 6)
- * @returns {Promise<void>}
- */
-async function populateQuickAccessWithCPRActions(actor, actionUuids) {
-    if (!actor || !actionUuids || actionUuids.length === 0) {
-        console.log('[bg3-hud-dnd5e] populateQuickAccessWithCPRActions: Skipping - no actor or action UUIDs');
-        return;
-    }
-    
-    try {
-        // Create temporary persistence manager for this actor
-        const { PersistenceManager } = await import('/modules/bg3-hud-core/scripts/managers/PersistenceManager.js');
-        const tempPersistence = new PersistenceManager();
-        tempPersistence.setToken(actor);
-        
-        // Load current state
-        let state = await tempPersistence.loadState();
-        
-        // Check if quickAccess already has items (don't overwrite user data or other auto-populations)
-        const existingItems = state.quickAccess?.grids?.[0]?.items || {};
-        const hasExistingItems = Object.keys(existingItems).length > 0;
-        
-        if (hasExistingItems) {
-            console.log(`[bg3-hud-dnd5e] populateQuickAccessWithCPRActions: Skipping - quickAccess already has ${Object.keys(existingItems).length} items`);
-            return; // Don't overwrite existing items
-        }
-        
-        console.log(`[bg3-hud-dnd5e] populateQuickAccessWithCPRActions: Populating with ${actionUuids.length} CPR actions for actor ${actor.name}`);
-        
-        // Ensure quickAccess structure exists
-        if (!state.quickAccess || !Array.isArray(state.quickAccess.grids)) {
-            state.quickAccess = { grids: [{ rows: 2, cols: 3, items: {} }] };
-        }
-        
-        const grid = state.quickAccess.grids[0];
-        if (!grid.items) {
-            grid.items = {};
-        }
-        
-        // Populate grid cells with CPR action UUIDs (up to 6, filling left to right, top to bottom)
-        // Slot keys use format "col-row" (e.g., "0-0", "1-0", "2-0", "0-1", "1-1", "2-1")
-        const maxActions = Math.min(actionUuids.length, 6);
-        const populatedSlots = [];
-        for (let i = 0; i < maxActions; i++) {
-            const row = Math.floor(i / grid.cols);
-            const col = i % grid.cols;
-            const slotKey = `${col}-${row}`; // Format: col-row (not row-col!)
-            
-            // Store cell data with UUID reference (compendium UUID)
-            grid.items[slotKey] = {
-                uuid: actionUuids[i],
-                type: 'Item',
-            };
-            populatedSlots.push(slotKey);
-        }
-        
-        // Save updated state
-        await tempPersistence.saveState(state);
-        
-        console.log(`[bg3-hud-dnd5e] Populated quickAccess with ${maxActions} CPR actions in slots: ${populatedSlots.join(', ')}`);
-        
-        // Delay before refreshing HUD (50ms after quickAccess population)
-        await new Promise(resolve => setTimeout(resolve, 50));
-        
-        // Refresh HUD if it's currently showing this actor
-        if (ui.BG3HUD_APP?.currentActor?.id === actor.id) {
-            await ui.BG3HUD_APP.refresh();
-        }
-    } catch (error) {
-        console.error('[bg3-hud-dnd5e] Error populating quickAccess with CPR actions:', error);
-    }
-}
-
-/**
  * Hook into token creation to populate quickAccess with CPR actions
  */
 Hooks.on('createToken', async (tokenDocument, options, userId) => {
@@ -799,50 +654,10 @@ Hooks.on('createToken', async (tokenDocument, options, userId) => {
     const actor = tokenDocument.actor;
     if (!actor) return;
 
-    // Check if CPR actions auto-populate is enabled
-    const enableAutoPopulate = game.settings.get(MODULE_ID, 'enableCPRActionsAutoPopulate');
-    if (!enableAutoPopulate) return;
-
-    // Check if CPR module is active
-    if (!game.modules.get('chris-premades')?.active) return;
-
-    // Wait for grids to finish populating
-    // Grids populate with 50ms delays between them, so wait for all grids + passives + buffer
-    // This ensures quickAccess populates after grid 0, grid 1, grid 2, and passives
-    await new Promise(resolve => setTimeout(resolve, 200));
-
-    try {
-        // Get CPR config for current rules version
-        const cprConfig = getCPRConfig();
-
-        // Get selected CPR actions for this rules version (these are the ones the GM chose)
-        const selectedActions = game.settings.get(MODULE_ID, cprConfig.settingsKey) || [];
-        if (selectedActions.length === 0) {
-            // If no actions selected, get actions based on rules version (fallback)
-            const pack = game.packs.get(cprConfig.packId);
-            if (!pack) {
-                console.warn(`[bg3-hud-dnd5e] ${cprConfig.packName} pack not found`);
-                return;
-            }
-
-            const index = await pack.getIndex();
-            const actions = Array.from(index.entries())
-                .map(([id, entry]) => ({
-                    id,
-                    uuid: `Compendium.${cprConfig.packId}.Item.${id}`,
-                    name: entry.name
-                }))
-                .sort((a, b) => a.name.localeCompare(b.name))
-                .slice(0, 6);
-
-            const actionUuids = actions.map(a => a.uuid);
-            await populateQuickAccessWithCPRActions(actor, actionUuids);
-        } else {
-            // Use selected actions (respects GM's choices)
-            await populateQuickAccessWithCPRActions(actor, selectedActions.slice(0, 6));
-        }
-    } catch (error) {
-        console.error('[bg3-hud-dnd5e] Error populating CPR actions on token creation:', error);
+    // Use adapter's cprAutoPopulate
+    const adapter = ui.BG3HOTBAR?.registry?.activeAdapter;
+    if (adapter?.cprAutoPopulate) {
+        await adapter.cprAutoPopulate.onTokenCreation(actor);
     }
 });
 
@@ -852,18 +667,9 @@ Hooks.on('createToken', async (tokenDocument, options, userId) => {
 Hooks.on('BG3HUD_TOKEN_CHANGED', async (token) => {
     if (!token?.actor) return;
 
-    const actor = token.actor;
-
-    // Check if CPR module is active
-    if (!game.modules.get('chris-premades')?.active) return;
-
-    // Get CPR config for current rules version
-    const cprConfig = getCPRConfig();
-
-    // Get selected CPR actions for this rules version
-    const selectedActions = game.settings.get(MODULE_ID, cprConfig.settingsKey) || [];
-    if (selectedActions.length === 0) return;
-    
-    // Use populateQuickAccessWithCPRActions which checks for existing items
-    await populateQuickAccessWithCPRActions(actor, selectedActions.slice(0, 6));
+    // Use adapter's cprAutoPopulate
+    const adapter = ui.BG3HOTBAR?.registry?.activeAdapter;
+    if (adapter?.cprAutoPopulate) {
+        await adapter.cprAutoPopulate.onTokenChange(token);
+    }
 });

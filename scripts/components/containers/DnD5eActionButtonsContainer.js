@@ -36,8 +36,8 @@ export class DnD5eActionButtonsContainer extends ActionButtonsContainer {
             tooltip: game.i18n.localize('BG3HUD.EndTurn'),
             tooltipDirection: 'LEFT',
             visible: () => {
-                return !!game.combat?.started && 
-                       game.combat?.combatant?.actor?.id === this.actor.id;
+                return !!game.combat?.started &&
+                    game.combat?.combatant?.actor?.id === this.actor.id;
             },
             onClick: async () => {
                 if (game.combat) {
@@ -84,11 +84,8 @@ export class DnD5eActionButtonsContainer extends ActionButtonsContainer {
      * Show rest type selection dialog
      */
     async showRestDialog() {
-        const { RestDialog } = await import('../ui/RestDialog.js');
-        const dialog = new RestDialog({
-            actor: this.actor
-        });
-        await dialog.render(true);
+        const { showRestDialog } = await import('../ui/RestDialog.js');
+        await showRestDialog(this.actor);
     }
 }
 

@@ -2,6 +2,8 @@
  * CPR Actions Selection Dialog
  * Allows GMs to select up to 6 CPR Generic Actions from the appropriate CPRActions compendium
  * based on the D&D 5e rules version setting (2014/legacy or 2024/modern)
+ * 
+ * Uses the same styling pattern as core SelectionDialog (bg3-selection-dialog)
  */
 
 import { BG3Component } from '/modules/bg3-hud-core/scripts/components/BG3Component.js';
@@ -64,10 +66,10 @@ export class CPRActionsSelectionDialog extends BG3Component {
     async render() {
         return new Promise(async (resolve) => {
             this.resolve = resolve;
-            
+
             // Load available actions from compendium
             await this._loadAvailableActions();
-            
+
             // Render dialog
             this._renderDialog();
         });
@@ -110,126 +112,121 @@ export class CPRActionsSelectionDialog extends BG3Component {
     }
 
     /**
-     * Render the dialog HTML
+     * Render the dialog HTML using bg3-selection-dialog pattern
      * @private
      */
     _renderDialog() {
-        // Create dialog container (non-blocking, no dimming)
-        this.element = this.createElement('div', ['cpr-actions-selection-overlay']);
-        
-        // Create dialog box
-        const dialogBox = this.createElement('div', ['bg3-dialog', 'cpr-actions-selection-dialog']);
-        
-        // Title
-        const title = this.createElement('h2', ['bg3-dialog-title']);
-        title.textContent = this.title;
-        dialogBox.appendChild(title);
+        // Create dialog container (matches SelectionDialog pattern)
+        this.element = this.createElement('div', ['bg3-selection-dialog']);
 
-        // Description
+        // Dialog header
+        const header = this.createElement('div', ['dialog-header']);
+        const titleEl = this.createElement('h2', ['dialog-title']);
+        titleEl.textContent = this.title;
+        header.appendChild(titleEl);
+        this.element.appendChild(header);
+
+        // Description (between header and content)
         const description = this.createElement('p', ['bg3-dialog-description']);
         description.innerHTML = game.i18n.format(`${MODULE_ID}.CPR.SelectActionsDescription`, { max: MAX_SELECTIONS });
-        dialogBox.appendChild(description);
 
-        // Selection counter
-        const counter = this.createElement('div', ['cpr-actions-counter']);
-        this._updateCounter(counter);
-        dialogBox.appendChild(counter);
+        // Add selection counter to description
+        const counterSpan = this.createElement('span', ['dialog-counter']);
+        this._updateCounter(counterSpan);
+        description.appendChild(document.createElement('br'));
+        description.appendChild(counterSpan);
+        this.element.appendChild(description);
 
-        // Content area with action list
-        const content = this.createElement('div', ['bg3-dialog-content', 'cpr-actions-list']);
-        
+        // Dialog content
+        const content = this.createElement('div', ['dialog-content']);
+
         if (this.availableActions.length === 0) {
-            const emptyMessage = this.createElement('p', ['cpr-actions-empty']);
+            const emptyMessage = this.createElement('p', ['dialog-empty-message']);
             emptyMessage.textContent = game.i18n.localize(`${MODULE_ID}.CPR.NoActionsAvailable`);
+            emptyMessage.style.textAlign = 'center';
+            emptyMessage.style.color = 'var(--bg3-text, #ddd)';
             content.appendChild(emptyMessage);
         } else {
-            // Create checkbox list
-            const actionList = this.createElement('div', ['cpr-actions-checkbox-list']);
-            
+            // Create item rows (same pattern as SelectionDialog)
             for (const action of this.availableActions) {
-                const item = this._createActionItem(action);
-                actionList.appendChild(item);
+                const row = this._createActionRow(action);
+                content.appendChild(row);
             }
-            
-            content.appendChild(actionList);
         }
-        
-        dialogBox.appendChild(content);
 
-        // Buttons
-        const buttons = this.createElement('div', ['bg3-dialog-buttons']);
-        
-        const confirmButton = this.createElement('button', ['bg3-button', 'bg3-button-primary']);
-        confirmButton.innerHTML = '<i class="fas fa-save"></i> ' + game.i18n.localize('Save');
-        confirmButton.addEventListener('click', () => this._onConfirm());
-        
-        const cancelButton = this.createElement('button', ['bg3-button']);
-        cancelButton.innerHTML = '<i class="fas fa-times"></i> ' + game.i18n.localize('Cancel');
-        cancelButton.addEventListener('click', () => this._onCancel());
-        
-        buttons.appendChild(cancelButton);
-        buttons.appendChild(confirmButton);
-        dialogBox.appendChild(buttons);
+        this.element.appendChild(content);
 
-        this.element.appendChild(dialogBox);
-        
-        // Add to DOM
+        // Dialog footer with buttons
+        const footer = this.createElement('div', ['dialog-footer']);
+
+        const cancelBtn = this.createElement('button', ['dialog-button', 'dialog-button-secondary']);
+        cancelBtn.innerHTML = '<i class="fas fa-times"></i> ' + game.i18n.localize('Cancel');
+        this.addEventListener(cancelBtn, 'click', () => this._onCancel());
+
+        const saveBtn = this.createElement('button', ['dialog-button', 'dialog-button-primary']);
+        saveBtn.innerHTML = '<i class="fas fa-save"></i> ' + game.i18n.localize('Save');
+        this.addEventListener(saveBtn, 'click', () => this._onConfirm());
+
+        footer.appendChild(cancelBtn);
+        footer.appendChild(saveBtn);
+        this.element.appendChild(footer);
+
+        // Add dialog directly to body
         document.body.appendChild(this.element);
 
-        // Prevent clicks on dialog from closing (only close on cancel button)
-        dialogBox.addEventListener('click', (e) => {
-            e.stopPropagation();
-        });
-
         // Close on Escape key
-        this._escapeHandler = (e) => {
-            if (e.key === 'Escape') {
+        this.addEventListener(document, 'keydown', (event) => {
+            if (event.key === 'Escape') {
                 this._onCancel();
             }
-        };
-        document.addEventListener('keydown', this._escapeHandler);
+        });
     }
 
     /**
-     * Create an action item checkbox
+     * Create an action row (matches SelectionDialog .dialog-item-row pattern)
      * @param {Object} action - Action data {id, uuid, name, img}
      * @returns {HTMLElement}
      * @private
      */
-    _createActionItem(action) {
-        const item = this.createElement('div', ['cpr-action-item']);
-        
-        const checkbox = this.createElement('input', ['cpr-action-checkbox']);
+    _createActionRow(action) {
+        const row = this.createElement('div', ['dialog-item-row']);
+        row.dataset.itemId = action.uuid;
+
+        // Checkbox
+        const checkbox = this.createElement('input', ['dialog-checkbox']);
         checkbox.type = 'checkbox';
-        checkbox.id = `cpr-action-${action.id}`;
-        checkbox.value = action.uuid;
         checkbox.checked = this.selectedActions.has(action.uuid);
+        checkbox.dataset.itemId = action.uuid;
         checkbox.disabled = !checkbox.checked && this.selectedActions.size >= MAX_SELECTIONS;
-        
-        checkbox.addEventListener('change', (e) => {
-            this._onCheckboxChange(e.target, action.uuid);
-            const counter = this.element.querySelector('.cpr-actions-counter');
-            if (counter) this._updateCounter(counter);
-        });
-        
-        // Create icon container
-        const iconContainer = this.createElement('div', ['cpr-action-icon']);
-        const icon = this.createElement('img', ['cpr-action-icon-img']);
+
+        // Icon
+        const icon = this.createElement('img', ['dialog-item-icon']);
         icon.src = action.img;
         icon.alt = action.name;
-        icon.width = 40;
-        icon.height = 40;
-        iconContainer.appendChild(icon);
-        
-        const label = this.createElement('label', ['cpr-action-label']);
-        label.setAttribute('for', checkbox.id);
+
+        // Label
+        const label = this.createElement('span', ['dialog-item-label']);
         label.textContent = action.name;
-        
-        item.appendChild(checkbox);
-        item.appendChild(iconContainer);
-        item.appendChild(label);
-        
-        return item;
+
+        // Handle row click (toggle checkbox)
+        this.addEventListener(row, 'click', (event) => {
+            // Don't toggle if clicking directly on checkbox or if disabled
+            if (event.target !== checkbox && !checkbox.disabled) {
+                checkbox.checked = !checkbox.checked;
+                this._onCheckboxChange(checkbox, action.uuid);
+            }
+        });
+
+        // Handle checkbox change
+        this.addEventListener(checkbox, 'change', () => {
+            this._onCheckboxChange(checkbox, action.uuid);
+        });
+
+        row.appendChild(checkbox);
+        row.appendChild(icon);
+        row.appendChild(label);
+
+        return row;
     }
 
     /**
@@ -251,12 +248,16 @@ export class CPRActionsSelectionDialog extends BG3Component {
         } else {
             this.selectedActions.delete(uuid);
         }
-        
+
         // Update disabled state of all checkboxes
-        const allCheckboxes = this.element.querySelectorAll('.cpr-action-checkbox');
+        const allCheckboxes = this.element.querySelectorAll('.dialog-checkbox');
         allCheckboxes.forEach((cb) => {
             cb.disabled = !cb.checked && this.selectedActions.size >= MAX_SELECTIONS;
         });
+
+        // Update counter
+        const counter = this.element.querySelector('.dialog-counter');
+        if (counter) this._updateCounter(counter);
     }
 
     /**
@@ -278,7 +279,7 @@ export class CPRActionsSelectionDialog extends BG3Component {
      */
     _onConfirm() {
         const selected = Array.from(this.selectedActions);
-        this._cleanup();
+        this.close();
         if (this.resolve) {
             this.resolve(selected);
         }
@@ -289,24 +290,31 @@ export class CPRActionsSelectionDialog extends BG3Component {
      * @private
      */
     _onCancel() {
-        this._cleanup();
+        this.close();
         if (this.resolve) {
             this.resolve(null);
         }
     }
 
     /**
-     * Cleanup dialog
-     * @private
+     * Close and cleanup the dialog
      */
-    _cleanup() {
-        if (this._escapeHandler) {
-            document.removeEventListener('keydown', this._escapeHandler);
-        }
+    close() {
+        // Remove dialog from DOM
         if (this.element && this.element.parentNode) {
             this.element.parentNode.removeChild(this.element);
         }
+        // Then destroy component (cleans up event listeners)
+        this.destroy();
+    }
+
+    /**
+     * Destroy the dialog
+     */
+    destroy() {
+        // Clean up event listeners
+        super.destroy();
+        // Clear references
+        this.element = null;
     }
 }
-
-
