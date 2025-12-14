@@ -515,6 +515,7 @@ class DnD5eAdapter {
     /**
      * Check if an item should be blocked from being added to the hotbar
      * Used by InteractionCoordinator to filter external drops
+     * CPR items should only appear in quick access or via the Generic Actions button
      * @param {Item} item - The item to check
      * @returns {Promise<{blocked: boolean, reason?: string}>} Whether the item should be blocked and why
      */
@@ -554,41 +555,37 @@ class DnD5eAdapter {
             };
         }
 
-        // Check if the item was created from CPRActions compendium (for embedded items)
-        // These have the source compendium stored in flags or _stats
-        const sourceCompendium = item._stats?.compendiumSource || item.flags?.core?.sourceId || '';
-
-        // Block embedded Generic Actions items (imported from CPRMiscellaneous)
-        if (genericActionsUuids.some(gaUuid => sourceCompendium.includes(gaUuid.split('.').pop()))) {
+        // Check for Generic Actions items by NAME (for embedded items on actors)
+        const genericActionsNames = [
+            'Generic Actions (2014)',
+            'Generic Actions (2024)'
+        ];
+        if (genericActionsNames.includes(item.name)) {
             return {
                 blocked: true,
                 reason: game.i18n.localize(`${MODULE_ID}.Notifications.CPRActionBlockedFromHotbar`)
             };
         }
 
+        // Check if the item was created from CPRActions compendium (for embedded items)
+        // These have the source compendium stored in flags or _stats
+        const sourceCompendium = item._stats?.compendiumSource || item.flags?.core?.sourceId || '';
+
+        // Block embedded Generic Actions items (imported from CPRMiscellaneous)
+        if (sourceCompendium.includes('chris-premades.CPRMiscellaneous')) {
+            return {
+                blocked: true,
+                reason: game.i18n.localize(`${MODULE_ID}.Notifications.CPRActionBlockedFromHotbar`)
+            };
+        }
+
+        // Block items from CPRActions or CPRActions2024 compendiums
         if (sourceCompendium.includes('chris-premades.CPRActions') ||
             sourceCompendium.includes('chris-premades.CPRActions2024')) {
-            // But allow derived items like "Grapple: Escape" which are created dynamically
-            // These typically have different flags or are created by CPR's automation
-            // Check if this is the original action (not a derived one)
-            const cprConfig = getCPRConfig();
-            const selectedActions = game.settings.get(MODULE_ID, cprConfig.settingsKey) || [];
-
-            // If the source matches one of our selected CPR actions, block it
-            // But derived items (created during gameplay) won't match exactly
-            const isSelectedAction = selectedActions.some(actionUuid => {
-                // Extract the item ID from the stored UUID
-                const actionId = actionUuid.split('.').pop();
-                const sourceId = sourceCompendium.split('.').pop();
-                return actionId === sourceId;
-            });
-
-            if (isSelectedAction) {
-                return {
-                    blocked: true,
-                    reason: game.i18n.localize(`${MODULE_ID}.Notifications.CPRActionBlockedFromHotbar`)
-                };
-            }
+            return {
+                blocked: true,
+                reason: game.i18n.localize(`${MODULE_ID}.Notifications.CPRActionBlockedFromHotbar`)
+            };
         }
 
         return { blocked: false };

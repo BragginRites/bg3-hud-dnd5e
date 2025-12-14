@@ -111,34 +111,51 @@ export class DnD5eCPRGenericActionsContainer extends BG3Component {
 
     /**
      * Handle button click - use the CPR Generic Actions item
+     * CPR items must stay permanently on actor for active effects to work with midi-qol
      * @param {MouseEvent} event - Click event
      * @private
      */
     async _onClick(event) {
         try {
-            // Get the item from the compendium (based on rules version)
-            const uuid = getCPRGenericActionsUUID();
-            const item = await fromUuid(uuid);
-            
-            if (!item) {
-                ui.notifications.warn(
-                    game.i18n.localize(`${MODULE_ID}.Notifications.CPRGenericActionsNotFound`)
-                );
-                return;
-            }
+            // Get the expected item name based on rules version
+            const rulesVersion = game.settings.get('dnd5e', 'rulesVersion');
+            const itemName = rulesVersion === 'modern'
+                ? 'Generic Actions (2024)'
+                : 'Generic Actions (2014)';
 
-            // Check if actor has the item, if not create it
-            let actorItem = this.actor.items.find(
-                (i) => i.name === item.name || i.system?.identifier === item.system?.identifier
-            );
+            // Check if actor already has the item by name
+            let actorItem = this.actor.items.find(i => i.name === itemName);
 
             if (!actorItem) {
-                // Create the item on the actor
-                const createdItems = await this.actor.createEmbeddedDocuments('Item', [item.toObject()]);
-                actorItem = createdItems[0];
+                // Item not on actor - create it from compendium
+                const uuid = getCPRGenericActionsUUID();
+                const compendiumItem = await fromUuid(uuid);
+
+                if (!compendiumItem) {
+                    ui.notifications.warn(
+                        game.i18n.localize(`${MODULE_ID}.Notifications.CPRGenericActionsNotFound`)
+                    );
+                    return;
+                }
+
+                // Create the item on the actor - it stays permanently for midi-qol/active effects
+                // Use noBG3AutoAdd to prevent ItemUpdateManager from auto-adding to hotbar
+                const data = foundry.utils.deepClone(compendiumItem.toObject());
+                delete data._id; // Let Foundry assign a new ID
+                const createdItems = await this.actor.createEmbeddedDocuments('Item', [data], { noBG3AutoAdd: true });
+                actorItem = createdItems?.[0];
+
+                if (!actorItem) {
+                    ui.notifications.warn(
+                        game.i18n.localize(`${MODULE_ID}.Notifications.CPRGenericActionsNotFound`)
+                    );
+                    return;
+                }
+
+                console.log(`[bg3-hud-dnd5e] Created CPR Generic Actions item on actor: ${actorItem.name}`);
             }
 
-            // Use the item (this will trigger CPR's dialog)
+            // Use the embedded item (never delete - active effects require persistence)
             if (typeof actorItem.use === 'function') {
                 await actorItem.use({ event });
             } else {

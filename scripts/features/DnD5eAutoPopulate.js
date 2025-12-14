@@ -53,6 +53,7 @@ export class DnD5eAutoPopulate extends AutoPopulateFramework {
     /**
      * Get items from actor that match selected types
      * Includes D&D 5e-specific filtering (spell preparation, activities, etc.)
+     * Excludes CPR actions which should only appear in quick access
      * @param {Actor} actor - The actor
      * @param {Array<string>} selectedTypes - Selected type values
      * @returns {Promise<Array<{uuid: string}>>}
@@ -76,10 +77,99 @@ export class DnD5eAutoPopulate extends AutoPopulateFramework {
                 continue;
             }
 
+            // Exclude CPR items - they should only appear in quick access
+            if (this._isCPRItem(item)) {
+                continue;
+            }
+
             items.push({ uuid: item.uuid });
         }
 
         return items;
+    }
+
+    /**
+     * Check if an item is a CPR action that should be excluded from main hotbar
+     * CPR actions should only appear in quick access container
+     * @param {Item} item - The item to check
+     * @returns {boolean} True if this is a CPR item that should be excluded
+     * @private
+     */
+    _isCPRItem(item) {
+        if (!item) return false;
+
+        // Check if CPR blocking is enabled
+        const blockCPRActions = game.settings.get(MODULE_ID, 'blockCPRActionsOnHotbar');
+        if (!blockCPRActions) return false;
+
+        // Check if CPR module is active
+        if (!game.modules.get('chris-premades')?.active) return false;
+
+        // CHECK BY NAME FIRST - most reliable for embedded items
+        // Generic Actions items (main dialog items)
+        const genericActionsNames = [
+            'Generic Actions (2014)',
+            'Generic Actions (2024)'
+        ];
+        if (genericActionsNames.includes(item.name)) {
+            return true;
+        }
+
+        // Check against selected CPR action names from settings
+        // These are the actions that get auto-populated to quick access
+        const rulesVersion = game.settings.get('dnd5e', 'rulesVersion');
+        const settingsKey = rulesVersion === 'modern'
+            ? 'selectedCPRActionsModern'
+            : 'selectedCPRActionsLegacy';
+
+        // Get the CPR action names that are configured for quick access
+        // These should NOT appear in main hotbar
+        const cprActionNames = this._getCPRActionNames();
+        if (cprActionNames.includes(item.name)) {
+            return true;
+        }
+
+        // CHECK BY SOURCE - for items dragged from compendium
+        const sourceCompendium = item._stats?.compendiumSource || item.flags?.core?.sourceId || '';
+
+        // Block items from CPRActions or CPRActions2024 compendiums
+        if (sourceCompendium.includes('chris-premades.CPRActions') ||
+            sourceCompendium.includes('chris-premades.CPRActions2024')) {
+            return true;
+        }
+
+        // Block items from CPRMiscellaneous (Generic Actions items)
+        if (sourceCompendium.includes('chris-premades.CPRMiscellaneous')) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Get the list of CPR action names that should be blocked from main hotbar
+     * These are the standard CPR actions like Dash, Dodge, Disengage, etc.
+     * @returns {string[]} Array of action names
+     * @private
+     */
+    _getCPRActionNames() {
+        // Standard CPR action names (both 2014 and 2024)
+        // These should only appear in quick access, not main hotbar
+        return [
+            'Dash',
+            'Disengage',
+            'Dodge',
+            'Grapple',
+            'Help',
+            'Hide',
+            'Ready',
+            'Shove',
+            'Search',
+            'Use an Object',
+            'Influence',
+            'Magic',
+            'Study'
+        ];
     }
 
     /**

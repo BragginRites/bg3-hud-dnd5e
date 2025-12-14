@@ -101,8 +101,9 @@ export class DnD5eCPRAutoPopulate {
 
     /**
      * Populate quick access grid with CPR actions
+     * Creates items on actor first (if not present), then stores embedded item UUIDs
      * @param {Actor} actor - The actor
-     * @param {Array<string>} actionUuids - Array of CPR action UUIDs (max 6)
+     * @param {Array<string>} actionUuids - Array of CPR action compendium UUIDs (max 6)
      * @returns {Promise<void>}
      */
     async populateQuickAccess(actor, actionUuids) {
@@ -131,18 +132,44 @@ export class DnD5eCPRAutoPopulate {
 
             console.log(`[bg3-hud-dnd5e] CPR AutoPopulate: Populating with ${actionUuids.length} CPR actions for actor ${actor.name}`);
 
-            // Resolve UUIDs to get item names for alphabetical sorting
-            const resolvedActions = [];
-            for (const uuid of actionUuids) {
-                const item = await fromUuid(uuid);
-                if (item) {
-                    resolvedActions.push({ uuid, name: item.name });
+            // For each compendium UUID, ensure item exists on actor and collect embedded UUIDs
+            const embeddedActions = [];
+            for (const compendiumUuid of actionUuids) {
+                const compendiumItem = await fromUuid(compendiumUuid);
+                if (!compendiumItem) {
+                    console.warn(`[bg3-hud-dnd5e] CPR AutoPopulate: Could not resolve ${compendiumUuid}`);
+                    continue;
+                }
+
+                // Check if actor already has this item by name
+                let actorItem = actor.items.find(i => i.name === compendiumItem.name);
+
+                if (!actorItem) {
+                    // Create the item on the actor - it stays permanently for midi-qol/active effects
+                    // Use noBG3AutoAdd to prevent ItemUpdateManager from auto-adding to main hotbar
+                    const data = foundry.utils.deepClone(compendiumItem.toObject());
+                    delete data._id; // Let Foundry assign a new ID
+                    const created = await actor.createEmbeddedDocuments('Item', [data], { noBG3AutoAdd: true });
+                    actorItem = created?.[0];
+
+                    if (actorItem) {
+                        console.log(`[bg3-hud-dnd5e] CPR AutoPopulate: Created item ${actorItem.name} on actor`);
+                    }
+                }
+
+                if (actorItem) {
+                    // Store embedded item UUID (Actor.XXXX.Item.YYYY format)
+                    embeddedActions.push({ uuid: actorItem.uuid, name: actorItem.name });
                 }
             }
 
+            if (embeddedActions.length === 0) {
+                console.warn('[bg3-hud-dnd5e] CPR AutoPopulate: No items could be created/found on actor');
+                return;
+            }
+
             // Sort alphabetically by name
-            resolvedActions.sort((a, b) => a.name.localeCompare(b.name));
-            const sortedUuids = resolvedActions.map(a => a.uuid);
+            embeddedActions.sort((a, b) => a.name.localeCompare(b.name));
 
             // Ensure quickAccess structure exists
             if (!state.quickAccess || !Array.isArray(state.quickAccess.grids)) {
@@ -154,18 +181,18 @@ export class DnD5eCPRAutoPopulate {
                 grid.items = {};
             }
 
-            // Populate grid cells with CPR action UUIDs (up to 6, filling left to right, top to bottom)
+            // Populate grid cells with EMBEDDED item UUIDs (up to 6, filling left to right, top to bottom)
             // Slot keys use format "col-row" (e.g., "0-0", "1-0", "2-0", "0-1", "1-1", "2-1")
-            const maxActions = Math.min(sortedUuids.length, 6);
+            const maxActions = Math.min(embeddedActions.length, 6);
             const populatedSlots = [];
             for (let i = 0; i < maxActions; i++) {
                 const row = Math.floor(i / grid.cols);
                 const col = i % grid.cols;
                 const slotKey = `${col}-${row}`; // Format: col-row (not row-col!)
 
-                // Store cell data with UUID reference (compendium UUID)
+                // Store cell data with embedded item UUID (not compendium UUID)
                 grid.items[slotKey] = {
-                    uuid: sortedUuids[i],
+                    uuid: embeddedActions[i].uuid,
                     type: 'Item',
                 };
                 populatedSlots.push(slotKey);
@@ -174,7 +201,7 @@ export class DnD5eCPRAutoPopulate {
             // Save updated state
             await tempPersistence.saveState(state);
 
-            console.log(`[bg3-hud-dnd5e] Populated quickAccess with ${maxActions} CPR actions in slots: ${populatedSlots.join(', ')}`);
+            console.log(`[bg3-hud-dnd5e] Populated quickAccess with ${maxActions} CPR actions (embedded) in slots: ${populatedSlots.join(', ')}`);
 
             // Delay before refreshing HUD (50ms after quickAccess population)
             await new Promise(resolve => setTimeout(resolve, 50));
