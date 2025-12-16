@@ -2,6 +2,8 @@
 
 A D&D 5e integration module for the BG3 Inspired HUD system. This module adapts the core HUD functionality for the D&D 5e system, providing token-specific HUD elements for abilities, spells, and effects with a design inspired by Baldur's Gate 3.
 
+<img width="1247" height="282" alt="image" src="https://github.com/user-attachments/assets/44590f11-0595-47af-9d58-bf5dd4a6c981" />
+
 **This module requires the bg3-hud-core module to function.**
 
 ## BG3 HUD Modules
