@@ -189,16 +189,9 @@ class DnD5eAdapter {
 
         console.log('D&D 5e Adapter | Cell clicked:', data);
 
-        // Handle different data types
-        switch (data.type) {
-            case 'Item':
-                await this._useItem(data.uuid, event);
-                break;
-            case 'Macro':
-                await this._executeMacro(data.uuid);
-                break;
-            default:
-                console.warn('D&D 5e Adapter | Unknown cell data type:', data.type);
+        // Handle Item type - Macros are handled by core
+        if (data.type === 'Item') {
+            await this._useItem(data.uuid, event);
         }
     }
 
@@ -339,22 +332,6 @@ class DnD5eAdapter {
             }
             ui.notifications.warn(game.i18n.localize(`${MODULE_ID}.Notifications.ItemCannotBeUsed`));
         }
-    }
-
-    /**
-     * Execute a macro
-     * @param {string} uuid - Macro UUID
-     * @private
-     */
-    async _executeMacro(uuid) {
-        const macro = await fromUuid(uuid);
-        if (!macro) {
-            ui.notifications.warn(game.i18n.localize(`${MODULE_ID}.Notifications.MacroNotFound`));
-            return;
-        }
-
-        console.log('D&D 5e Adapter | Executing macro:', macro.name);
-        await macro.execute();
     }
 
     /**

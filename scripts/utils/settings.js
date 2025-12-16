@@ -258,6 +258,16 @@ export function registerSettings() {
     default: false
   });
 
+  // Auto-populate only prepared spells setting
+  game.settings.register(MODULE_ID, 'autoPopulatePreparedSpellsOnly', {
+    name: `${MODULE_ID}.Settings.AutoPopulatePreparedSpellsOnly`,
+    hint: `${MODULE_ID}.Settings.AutoPopulatePreparedSpellsOnlyHint`,
+    scope: 'world',
+    config: false,
+    type: Boolean,
+    default: true
+  });
+
   // Auto-populate configuration setting
   game.settings.register(MODULE_ID, 'autoPopulateConfiguration', {
     name: `${MODULE_ID}.Settings.AutoPopulateConfiguration`,
@@ -286,7 +296,7 @@ export function registerSettings() {
     moduleId: MODULE_ID,
     titleKey: `${MODULE_ID}.Settings.AutoPopulate.MenuTitle`,
     sections: [
-      { legend: `${MODULE_ID}.Settings.AutoPopulate.Legend`, keys: ['autoPopulateEnabled', 'autoPopulatePlayerCharacters', 'autoPopulatePassivesEnabled'] }
+      { legend: `${MODULE_ID}.Settings.AutoPopulate.Legend`, keys: ['autoPopulateEnabled', 'autoPopulatePlayerCharacters', 'autoPopulatePassivesEnabled', 'autoPopulatePreparedSpellsOnly'] }
     ]
   });
 

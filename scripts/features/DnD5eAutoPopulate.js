@@ -207,6 +207,10 @@ export class DnD5eAutoPopulate extends AutoPopulateFramework {
 
     /**
      * Check if spell is usable (prepared, always prepared, etc.)
+     * When 'autoPopulatePreparedSpellsOnly' is enabled (default), only includes:
+     * - Prepared spells (system.prepared !== 0)
+     * - At-will, innate, pact magic spells (method !== "spell")
+     * When disabled, includes all spells with a valid casting method.
      * @param {Actor} actor - The actor
      * @param {Item} item - The spell item
      * @returns {boolean}
@@ -214,22 +218,28 @@ export class DnD5eAutoPopulate extends AutoPopulateFramework {
      */
     _isSpellUsable(actor, item) {
         const sys = item.system ?? {};
-
         const method = sys.method ?? "";
-        const prepared = sys.prepared ?? 0;
 
-        // Learned spells: allow only if prepared or always-prepared
-        if (method === "spell") {
-            return prepared !== 0;
+        // Empty method: not a usable spell regardless of setting
+        if (method === "") {
+            return false;
         }
 
-        // Any non-empty method is considered usable (pact, innate, atwill, etc.)
-        if (method !== "") {
+        // Non-learned spells (pact, innate, atwill, etc.) are always considered usable
+        if (method !== "spell") {
             return true;
         }
 
-        // Empty method: not a usable spell
-        return false;
+        // For learned spells with method="spell", check preparation if setting is enabled
+        const preparedOnly = game.settings.get(MODULE_ID, 'autoPopulatePreparedSpellsOnly');
+        if (!preparedOnly) {
+            // Setting disabled: include all learned spells
+            return true;
+        }
+
+        // Setting enabled: only include prepared spells (prepared !== 0)
+        const prepared = sys.prepared ?? 0;
+        return prepared !== 0;
     }
 
     /**

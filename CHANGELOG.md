@@ -1,3 +1,7 @@
+## [0.1.3] - 2025-12-17
+### Changed
+- **Macro Support**: Removed redundant macro handling - now delegated to core for system-agnostic execution.
+
 ## [0.1.2] - 2025-12-16
 ### Changed
 - **Consistency Update**: Changelog added for consistency with the new modular architecture.
