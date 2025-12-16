@@ -18,6 +18,7 @@ import { DnD5eCPRAutoPopulate } from './features/DnD5eCPRAutoPopulate.js';
 import { registerSettings } from './utils/settings.js';
 import { renderDnD5eTooltip } from './utils/tooltipRenderer.js';
 import { DnD5eMenuBuilder } from './components/menus/DnD5eMenuBuilder.js';
+import { DnD5eTargetingRules } from './utils/DnD5eTargetingRules.js';
 
 const MODULE_ID = 'bg3-hud-dnd5e';
 const ADVANTAGE_ROLL_EVENTS = [
@@ -152,10 +153,13 @@ class DnD5eAdapter {
         this.autoPopulate = new DnD5eAutoPopulate();
         this.cprAutoPopulate = new DnD5eCPRAutoPopulate();
 
+        // Targeting rules for target selector integration
+        this.targetingRules = DnD5eTargetingRules;
+
         // Link autoPopulate to autoSort for consistent sorting
         this.autoPopulate.setAutoSort(this.autoSort);
 
-        console.log('BG3 HUD D&D 5e | DnD5eAdapter created with autoSort, autoPopulate, and cprAutoPopulate');
+        console.log('BG3 HUD D&D 5e | DnD5eAdapter created with autoSort, autoPopulate, cprAutoPopulate, and targetingRules');
     }
 
     /**
@@ -276,6 +280,46 @@ class DnD5eAdapter {
         }
 
         console.log('D&D 5e Adapter | Using item:', itemToUse.name, isEmbedded ? '(embedded)' : '(from compendium)');
+
+        // Check if item needs targeting and target selector is enabled
+        const targetSelectorEnabled = game.settings.get('bg3-hud-core', 'enableTargetSelector');
+        const needsTargeting = targetSelectorEnabled && this.targetingRules?.needsTargeting({ item: itemToUse });
+
+        if (needsTargeting) {
+            // Get the source token
+            const sourceToken = actor.token?.object ??
+                canvas?.tokens?.placeables?.find(t => t.actor?.id === actor.id) ??
+                null;
+
+            if (sourceToken) {
+                try {
+                    // Start target selection
+                    const targets = await ui.BG3HOTBAR?.api?.startTargetSelection({
+                        token: sourceToken,
+                        item: itemToUse
+                    });
+
+                    // If user cancelled (empty array returned when cancelled), abort item use
+                    if (!targets || targets.length === 0) {
+                        console.log('D&D 5e Adapter | Target selection cancelled');
+                        // Clean up temp item if we created one
+                        if (createdItemId && actor.items.has(createdItemId)) {
+                            await actor.deleteEmbeddedDocuments('Item', [createdItemId]);
+                        }
+                        return;
+                    }
+
+                    console.log('D&D 5e Adapter | Targets selected:', targets.map(t => t.name).join(', '));
+                } catch (error) {
+                    console.error('D&D 5e Adapter | Target selection error:', error);
+                    // Clean up temp item if we created one
+                    if (createdItemId && actor.items.has(createdItemId)) {
+                        await actor.deleteEmbeddedDocuments('Item', [createdItemId]);
+                    }
+                    return;
+                }
+            }
+        }
 
         // Use the item (D&D 5e v4+ uses .use() method)
         if (typeof itemToUse.use === 'function') {
