@@ -8,6 +8,10 @@ assignees: ''
 ---
 
 **Is your feature request related to a problem? Please describe.**
+**Is your request a core UI feature?**
+If your feature relates to the general UI (visuals, layout, core mechanics), please request it on the Core repository:
+- [Core UI Issues](https://github.com/BragginRites/bg3-hud-core/issues)
+
 A clear and concise description of what the problem is. Ex. I'm always frustrated when [...]
 
 **Describe the solution you'd like**

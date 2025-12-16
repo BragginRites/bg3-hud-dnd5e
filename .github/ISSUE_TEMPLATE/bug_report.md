@@ -8,6 +8,10 @@ assignees: ''
 ---
 
 **Describe the bug**
+**Is your issue a core UI problem?**
+If your issue relates to the general UI (dragging windows, range indicators, target selection, etc), please report it on the Core repository:
+- [Core UI Issues](https://github.com/BragginRites/bg3-hud-core/issues)
+
 A clear and concise description of what the bug is.
 
 **To Reproduce**
