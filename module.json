@@ -2,7 +2,7 @@
   "id": "bg3-hud-dnd5e",
   "title": "BG3 Inspired HUD - D&D5e",
   "description": "A D&D 5e integration module for the BG3 Inspired HUD. This module adapts the core HUD functionality for the D&D 5e system, providing token-specific HUD elements for abilities, spells, and effects.",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "authors": [
     {
       "name": "BragginRites",
@@ -50,8 +50,8 @@
   },
   "persistentStorage": true,
   "url": "https://github.com/BragginRites/bg3-hud-dnd5e",
-  "manifest": "https://github.com/BragginRites/bg3-hud-dnd5e/releases/download/0.1.3/module.json",
-  "download": "https://github.com/BragginRites/bg3-hud-dnd5e/releases/download/0.1.3/bg3-hud-dnd5e.zip",
+  "manifest": "https://github.com/BragginRites/bg3-hud-dnd5e/releases/download/0.1.4/module.json",
+  "download": "https://github.com/BragginRites/bg3-hud-dnd5e/releases/download/0.1.4/bg3-hud-dnd5e.zip",
   "readme": "README.md",
   "bugs": "https://github.com/BragginRites/bg3-hud-dnd5e/issues"
 }

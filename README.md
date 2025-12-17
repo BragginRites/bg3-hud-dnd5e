@@ -14,10 +14,10 @@ A D&D 5e integration module for the BG3 Inspired HUD system. This module adapts 
 
 Coffee helps me stay up to 2am to write these modules. Thank you for the lack of sleep in advance!
 
-I'm currently building my own TTRPG system, **Chantry**, which you can follow at [patreon.com/ChantryVTTRPG](https://www.patreon.com/ChantryVTTRPG). Don't worry, I'm not giving up on my other modules!
+I'm currently building my own TTRPG system, **Chantry**, which you can follow at [patreon.com/BragginRites](https://www.patreon.com/BragginRites). Don't worry, I'm not giving up on my other modules!
 
 Support my work:
-- [Patreon](https://www.patreon.com/ChantryVTTRPG)
+- [Patreon](https://www.patreon.com/BragginRites)
 - [Ko-fi](https://ko-fi.com/bragginrites)
 
 ## Other Modules

@@ -179,7 +179,7 @@ class DnD5eAdapter {
     }
 
     /**
-     * Handle cell click (use item/spell/feature)
+     * Handle cell click (use item/spell/feature/activity)
      * @param {GridCell} cell - The clicked cell
      * @param {MouseEvent} event - The click event
      */
@@ -188,6 +188,12 @@ class DnD5eAdapter {
         if (!data) return;
 
         console.log('D&D 5e Adapter | Cell clicked:', data);
+
+        // Handle Activity type
+        if (data.type === 'Activity') {
+            await this._useActivity(data.uuid, event);
+            return;
+        }
 
         // Handle Item type - Macros are handled by core
         if (data.type === 'Item') {
@@ -332,6 +338,48 @@ class DnD5eAdapter {
             }
             ui.notifications.warn(game.i18n.localize(`${MODULE_ID}.Notifications.ItemCannotBeUsed`));
         }
+    }
+
+    /**
+     * Use a D&D 5e activity
+     * @param {string} uuid - Activity UUID
+     * @param {MouseEvent} event - The triggering event
+     * @private
+     */
+    async _useActivity(uuid, event) {
+        const activity = await fromUuid(uuid);
+        if (!activity) {
+            ui.notifications.warn(game.i18n.localize(`${MODULE_ID}.Notifications.ActivityNotFound`));
+            return;
+        }
+
+        console.log('D&D 5e Adapter | Using activity:', activity.name);
+
+        // Activities have their own use() method
+        if (typeof activity.use === 'function') {
+            await activity.use({ event });
+        } else {
+            ui.notifications.warn(game.i18n.localize(`${MODULE_ID}.Notifications.ActivityCannotBeUsed`));
+        }
+    }
+
+    /**
+     * Transform an activity to cell data format
+     * @param {Activity} activity - The activity to transform
+     * @returns {Promise<Object>} Cell data object
+     */
+    async transformActivityToCellData(activity) {
+        if (!activity) {
+            console.warn('DnD5e Adapter | transformActivityToCellData: No activity provided');
+            return null;
+        }
+
+        return {
+            uuid: activity.uuid,
+            name: activity.name,
+            img: activity.img || activity.item?.img,
+            type: 'Activity'
+        };
     }
 
     /**

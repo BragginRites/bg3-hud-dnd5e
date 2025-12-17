@@ -192,7 +192,13 @@
       "LongRestNotAvailable": "Long rest not available for this actor",
       "SlotOccupiedByTwoHandedWeapon": "This slot is occupied by a two-handed weapon",
       "FailedToRollInitiative": "Failed to roll initiative",
-      "CPRActionBlockedFromHotbar": "CPR Generic Actions cannot be added to the hotbar. Use the Quick Access grid instead."
+      "CPRActionBlockedFromHotbar": "CPR Generic Actions cannot be added to the hotbar. Use the Quick Access grid instead.",
+      "ActivityNotFound": "Activity not found",
+      "ActivityCannotBeUsed": "Activity cannot be used"
+    },
+    "AutoPopulateOptions": {
+      "IncludeActivities": "Include Individual Activities",
+      "IncludeActivitiesHint": "When enabled, items with multiple activities (e.g., Thrown weapons) will add each activity separately instead of the parent item"
     }
   }
 }

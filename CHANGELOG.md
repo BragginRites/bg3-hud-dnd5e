@@ -1,3 +1,8 @@
+## [0.1.4] - 2025-12-17
+### Added
+- **Activity Drag-and-Drop**: Added full support for dragging individual D&D 5e activities (e.g. "Throw" vs "Melee" attack) onto the hotbar.
+- **Auto-Populate Activities**: New option "Include Individual Activities" in Auto-Populate configuration. When enabled, items with multiple activities will populate each activity as a separate cell entry.
+
 ## [0.1.3] - 2025-12-17
 ### Added
 - **Prepared Spell Filtering**: Separate settings for Players (default: on) and NPCs (default: off) to filter spell containers to only show prepared spells. At-will, innate, and pact magic spells are always included.

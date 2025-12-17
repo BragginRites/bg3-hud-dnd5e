@@ -56,10 +56,12 @@ export class DnD5eAutoPopulate extends AutoPopulateFramework {
      * Excludes CPR actions which should only appear in quick access
      * @param {Actor} actor - The actor
      * @param {Array<string>} selectedTypes - Selected type values
+     * @param {Object} [options] - Options object from configuration
      * @returns {Promise<Array<{uuid: string}>>}
      */
-    async getMatchingItems(actor, selectedTypes) {
+    async getMatchingItems(actor, selectedTypes, options = {}) {
         const items = [];
+        const includeActivities = options?.includeActivities ?? false;
 
         for (const item of actor.items) {
             // Check if item matches any selected type
@@ -82,10 +84,53 @@ export class DnD5eAutoPopulate extends AutoPopulateFramework {
                 continue;
             }
 
+            // Check if we should add individual activities
+            if (includeActivities && item.type !== 'spell') {
+                const activities = this._getActivities(item);
+                if (activities.length > 1) {
+                    // Add each activity separately
+                    for (const activity of activities) {
+                        items.push({
+                            uuid: activity.uuid,
+                            type: 'Activity'
+                        });
+                    }
+                    continue; // Skip adding the parent item
+                }
+            }
+
             items.push({ uuid: item.uuid });
         }
 
         return items;
+    }
+
+    /**
+     * Get activities from an item
+     * @param {Item} item - The item
+     * @returns {Array} Array of activities
+     * @private
+     */
+    _getActivities(item) {
+        const activities = item.system?.activities;
+        if (!activities) return [];
+
+        // Handle Map
+        if (activities instanceof Map) {
+            return Array.from(activities.values());
+        }
+
+        // Handle plain object
+        if (typeof activities === 'object' && !Array.isArray(activities)) {
+            return Object.values(activities);
+        }
+
+        // Handle array
+        if (Array.isArray(activities)) {
+            return activities;
+        }
+
+        return [];
     }
 
     /**

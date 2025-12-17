@@ -54,10 +54,20 @@ const openAutoPopulateConfiguration = async () => {
     '/modules/bg3-hud-core/scripts/components/ui/AutoPopulateConfigDialog.js'
   );
 
+  // Define toggle options for the dialog
+  const toggleOptions = [
+    {
+      key: 'includeActivities',
+      label: game.i18n.localize(`${MODULE_ID}.AutoPopulateOptions.IncludeActivities`),
+      hint: game.i18n.localize(`${MODULE_ID}.AutoPopulateOptions.IncludeActivitiesHint`)
+    }
+  ];
+
   const result = await new AutoPopulateConfigDialog({
     title: game.i18n.localize(`${MODULE_ID}.Settings.ConfigureAutoPopulateGrids`),
     choices,
     configuration: currentConfig,
+    toggleOptions
   }).render();
 
   if (result) {
@@ -289,7 +299,8 @@ export function registerSettings() {
     default: {
       grid0: [],
       grid1: [],
-      grid2: []
+      grid2: [],
+      options: {}
     }
   });
 
