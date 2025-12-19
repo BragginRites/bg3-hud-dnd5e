@@ -50,8 +50,8 @@ const openAutoPopulateConfiguration = async () => {
     return;
   }
 
-  const { AutoPopulateConfigDialog } = await import(
-    '/modules/bg3-hud-core/scripts/components/ui/AutoPopulateConfigDialog.js'
+  const { showAutoPopulateConfigDialog } = await import(
+    '/modules/bg3-hud-core/scripts/utils/dialogs.js'
   );
 
   // Define toggle options for the dialog
@@ -63,12 +63,13 @@ const openAutoPopulateConfiguration = async () => {
     }
   ];
 
-  const result = await new AutoPopulateConfigDialog({
+  const result = await showAutoPopulateConfigDialog({
     title: game.i18n.localize(`${MODULE_ID}.Settings.ConfigureAutoPopulateGrids`),
+    description: game.i18n.localize(`${MODULE_ID}.Settings.ConfigureAutoPopulateDescription`),
     choices,
     configuration: currentConfig,
     toggleOptions
-  }).render();
+  });
 
   if (result) {
     await game.settings.set(MODULE_ID, 'autoPopulateConfiguration', result);
@@ -87,18 +88,55 @@ const openCPRActionsSelection = async () => {
     return;
   }
 
-  const { CPRActionsSelectionDialog } = await import(
-    '../components/ui/CPRActionsSelectionDialog.js'
+  // Import showSelectionDialog from core
+  const { showSelectionDialog } = await import(
+    '/modules/bg3-hud-core/scripts/utils/dialogs.js'
   );
 
-  // Get CPR config to determine which settings key to use
+  // Get CPR config to determine which compendium and settings key to use
   const cprConfig = getCPRConfig();
   const currentSelection = game.settings.get(MODULE_ID, cprConfig.settingsKey) || [];
 
-  const result = await new CPRActionsSelectionDialog({
+  // Load available actions from the appropriate CPRActions compendium
+  const pack = game.packs.get(cprConfig.packId);
+  if (!pack) {
+    ui.notifications.warn(
+      game.i18n.localize(`${MODULE_ID}.CPR.NoActionsAvailable`)
+    );
+    return;
+  }
+
+  // Get pack index and load all items
+  const index = await pack.getIndex();
+  const itemIds = Array.from(index.keys());
+  const documents = await Promise.all(
+    itemIds.map(id => pack.getDocument(id))
+  );
+
+  // Format items for showSelectionDialog interface
+  const items = documents
+    .filter(doc => doc) // Filter out null/undefined
+    .map(doc => ({
+      id: doc.uuid,
+      label: doc.name,
+      img: doc.img || 'icons/svg/item-bag.svg',
+      selected: currentSelection.includes(doc.uuid)
+    }));
+
+  if (items.length === 0) {
+    ui.notifications.warn(
+      game.i18n.localize(`${MODULE_ID}.CPR.NoActionsAvailable`)
+    );
+    return;
+  }
+
+  // Show selection dialog with max 6 selections
+  const result = await showSelectionDialog({
     title: game.i18n.localize(`${MODULE_ID}.CPR.SelectActionsTitle`),
-    selectedActions: currentSelection,
-  }).render();
+    description: game.i18n.format(`${MODULE_ID}.CPR.SelectActionsDescription`, { max: 6 }),
+    items,
+    maxSelections: 6
+  });
 
   if (result) {
     await game.settings.set(MODULE_ID, cprConfig.settingsKey, result);

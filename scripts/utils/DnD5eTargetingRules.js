@@ -368,10 +368,74 @@ export function calculateRange({ item, activity = null, actor = null }) {
         }
     }
 
-    rangeInfo.range = range > 0 ? range : null;
-    rangeInfo.longRange = longRange > 0 ? longRange : null;
+    // Convert to GRID SQUARES for internal consistency
+    // This matches Core's expectation (Squares <= Squares) and PF2e's implementation
+    const sceneDistance = canvas?.scene?.grid?.distance || 5;
+    const sceneUnits = canvas?.scene?.grid?.units || 'ft';
+
+    // Normalise to scene units first (e.g. miles to feet)
+    const normalizedRange = _convertToSceneUnits(range, units, sceneUnits);
+    const normalizedLongRange = _convertToSceneUnits(longRange, units, sceneUnits);
+
+    // Convert to squares
+    if (normalizedRange !== null) {
+        rangeInfo.rangeInFeet = normalizedRange; // Keep original for reference
+        rangeInfo.range = normalizedRange / sceneDistance;
+    }
+
+    if (normalizedLongRange !== null) {
+        rangeInfo.longRangeInFeet = normalizedLongRange; // Keep original for reference
+        rangeInfo.longRange = normalizedLongRange / sceneDistance;
+    }
 
     return rangeInfo;
+}
+
+/**
+ * Convert a range value to scene units.
+ * @param {number} value - The range value
+ * @param {string} fromUnits - Source units
+ * @param {string} sceneUnits - Scene units
+ * @returns {number} Range in scene units
+ * @private
+ */
+function _convertToSceneUnits(value, fromUnits, sceneUnits) {
+    if (!value) return value;
+
+    const from = fromUnits?.toLowerCase() || 'ft';
+    const to = sceneUnits?.toLowerCase() || 'ft';
+
+    if (from === to) return value;
+    if ((from === 'ft' || from === 'feet') && (to === 'ft' || to === 'feet')) return value;
+    if ((from === 'm' || from === 'meter' || from === 'meters') && (to === 'm' || to === 'meter' || to === 'meters')) return value;
+
+    // Conversion factors to Feet
+    const toFeet = {
+        'ft': 1, 'feet': 1,
+        'mi': 5280, 'mile': 5280, 'miles': 5280,
+        'm': 3.28084, 'meter': 3.28084, 'meters': 3.28084,
+        'km': 3280.84, 'kilometer': 3280.84, 'kilometers': 3280.84
+    };
+
+    // Conversion factors to Meters
+    const toMeters = {
+        'm': 1, 'meter': 1, 'meters': 1,
+        'km': 1000, 'kilometer': 1000, 'kilometers': 1000,
+        'ft': 0.3048, 'feet': 0.3048,
+        'mi': 1609.34, 'mile': 1609.34, 'miles': 1609.34
+    };
+
+    if (to === 'ft' || to === 'feet') {
+        const factor = toFeet[from] || 1;
+        return value * factor;
+    }
+
+    if (to === 'm' || to === 'meter' || to === 'meters') {
+        const factor = toMeters[from] || 1;
+        return value * factor;
+    }
+
+    return value;
 }
 
 // ========== Private Helper Functions ==========

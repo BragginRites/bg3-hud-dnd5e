@@ -1,3 +1,10 @@
+## [0.1.7] - 2025-12-19
+### Changed
+- **DialogV2 Migration**: Updated dialogs to use core's new `DialogV2`-based utilities for consistent Foundry V13 styling:
+  - Passives selection dialog now uses `showSelectionDialog()`.
+  - CPR Actions selection dialog now uses `showSelectionDialog()` with max selections support.
+  - Auto-populate configuration dialog now uses `showAutoPopulateConfigDialog()`.
+
 ## [0.1.6] - 2025-12-19
 ### Fixed
 - **Pact Slots Filter**: Fixed issue where the Pact Magic filter button would not appear in the filter list even when the actor had Pact Magic spells.

@@ -61,6 +61,9 @@ Hooks.on('bg3HudReady', async (BG3HUD_API) => {
         return array.includes(value) || array.some(item => String(item).includes(String(value)));
     });
 
+    // Patch AbilityTemplate for range indicators
+    patchAbilityTemplatePreview(BG3HUD_API);
+
     // Register Handlebars partials for tooltips
     const weaponBlockTemplate = await fetch('modules/bg3-hud-dnd5e/templates/tooltips/weapon-block.hbs').then(r => r.text());
     Handlebars.registerPartial('bg3-hud-dnd5e.weapon-block', weaponBlockTemplate);
@@ -739,3 +742,62 @@ Hooks.on('BG3HUD_TOKEN_CHANGED', async (token) => {
         await adapter.cprAutoPopulate.onTokenChange(token);
     }
 });
+
+/**
+ * Patch D&D 5e AbilityTemplate to show range indicator during preview
+ * @param {Object} BG3HUD_API - The BG3 HUD API
+ */
+function patchAbilityTemplatePreview(BG3HUD_API) {
+    // Check if AbilityTemplate exists (dnd5e scope)
+    const dnd5eCanvas = game.dnd5e?.canvas;
+    if (!dnd5eCanvas?.AbilityTemplate) {
+        console.warn('BG3 HUD D&D 5e | AbilityTemplate not found, skipping range indicator patch');
+        return;
+    }
+
+    const AbilityTemplate = dnd5eCanvas.AbilityTemplate;
+
+    // Check if already patched to avoid double-patching if module reloads
+    if (AbilityTemplate.prototype._bg3hud_original_drawPreview) {
+        return;
+    }
+
+    const originalDrawPreview = AbilityTemplate.prototype.drawPreview;
+
+    // Store original for reference/debugging
+    AbilityTemplate.prototype._bg3hud_original_drawPreview = originalDrawPreview;
+
+    AbilityTemplate.prototype.drawPreview = async function (...args) {
+        // Show indicator if we have an item and a token
+        const item = this.item;
+        const actor = item?.actor;
+        let token = actor?.token?.object;
+
+        // If actor has no token on canvas, try to find one
+        if (!token && actor) {
+            token = canvas.tokens.placeables.find(t => t.actor?.id === actor.id);
+        }
+
+        // Only show if we found a token and item
+        if (token && item) {
+            try {
+                // Determine if we should show the indicator
+                // We use the API which internally checks if range > 0
+                // This handles "Self" range spells (cones/cubes) correctly (range=0 -> no ring)
+                BG3HUD_API.showRangeIndicator({ token, item });
+            } catch (e) {
+                console.error('BG3 HUD D&D 5e | Error showing range indicator:', e);
+            }
+        }
+
+        try {
+            // Call original method and await its result
+            return await originalDrawPreview.apply(this, args);
+        } finally {
+            // Always hide indicator when preview matches (resolve) or cancels (reject/resolve null)
+            BG3HUD_API.hideRangeIndicator();
+        }
+    };
+
+    console.log('BG3 HUD D&D 5e | Patched AbilityTemplate.drawPreview for range indicators');
+}
