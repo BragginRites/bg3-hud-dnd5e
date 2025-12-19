@@ -428,6 +428,21 @@ class DnD5eAdapter {
     }
 
     /**
+     * Called by core AFTER all auto-populate grids are completed
+     * Used for CPR auto-populate to avoid race conditions with state saving
+     * @param {Actor} actor - The actor for the newly created token
+     * @param {PersistenceManager} persistenceManager - The same persistence manager used for grid population
+     */
+    async onTokenCreationComplete(actor, persistenceManager) {
+        if (!actor) return;
+
+        // Use adapter's cprAutoPopulate with the provided persistence manager
+        if (this.cprAutoPopulate) {
+            await this.cprAutoPopulate.onTokenCreation(actor, persistenceManager);
+        }
+    }
+
+    /**
      * Check if an item is a container (bag, pouch, box, etc.)
      * Delegates to DnD5eContainerPopover module
      * @param {Object} cellData - The cell's data object
@@ -709,23 +724,8 @@ function registerAdvantageHooks() {
     advantageHooksRegistered = true;
 }
 
-/**
- * Hook into token creation to populate quickAccess with CPR actions
- */
-Hooks.on('createToken', async (tokenDocument, options, userId) => {
-    // Only run for GMs or if the user created the token
-    if (!game.user.isGM && game.userId !== userId) return;
-
-    // Get actor directly from tokenDocument
-    const actor = tokenDocument.actor;
-    if (!actor) return;
-
-    // Use adapter's cprAutoPopulate
-    const adapter = ui.BG3HOTBAR?.registry?.activeAdapter;
-    if (adapter?.cprAutoPopulate) {
-        await adapter.cprAutoPopulate.onTokenCreation(actor);
-    }
-});
+// NOTE: CPR auto-populate for token creation is now handled via adapter.onTokenCreationComplete()
+// which is called by core AFTER all grids are populated, preventing race conditions with state saving.
 
 /**
  * Hook into token selection/change to populate quickAccess with selected CPR actions if empty

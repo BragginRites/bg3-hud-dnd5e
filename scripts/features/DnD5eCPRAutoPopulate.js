@@ -104,19 +104,23 @@ export class DnD5eCPRAutoPopulate {
      * Creates items on actor first (if not present), then stores embedded item UUIDs
      * @param {Actor} actor - The actor
      * @param {Array<string>} actionUuids - Array of CPR action compendium UUIDs (max 6)
+     * @param {PersistenceManager} [providedPersistence] - Optional persistence manager from core (prevents race conditions)
      * @returns {Promise<void>}
      */
-    async populateQuickAccess(actor, actionUuids) {
+    async populateQuickAccess(actor, actionUuids, providedPersistence = null) {
         if (!actor || !actionUuids || actionUuids.length === 0) {
             console.log('[bg3-hud-dnd5e] CPR AutoPopulate: Skipping - no actor or action UUIDs');
             return;
         }
 
         try {
-            // Create temporary persistence manager for this actor
-            const { PersistenceManager } = await import('/modules/bg3-hud-core/scripts/managers/PersistenceManager.js');
-            const tempPersistence = new PersistenceManager();
-            tempPersistence.setToken(actor);
+            // Use provided persistence manager or create a new one
+            let tempPersistence = providedPersistence;
+            if (!tempPersistence) {
+                const { PersistenceManager } = await import('/modules/bg3-hud-core/scripts/managers/PersistenceManager.js');
+                tempPersistence = new PersistenceManager();
+                tempPersistence.setToken(actor);
+            }
 
             // Load current state
             let state = await tempPersistence.loadState();
@@ -216,11 +220,12 @@ export class DnD5eCPRAutoPopulate {
     }
 
     /**
-     * Handle token creation - populate quick access with CPR actions if enabled
+     * Handle token creation - populate quick access with CPR actions
      * @param {Actor} actor - The actor for the newly created token
+     * @param {PersistenceManager} [persistenceManager] - Optional persistence manager from core (prevents race conditions)
      * @returns {Promise<void>}
      */
-    async onTokenCreation(actor) {
+    async onTokenCreation(actor, persistenceManager = null) {
         if (!actor) return;
 
         // Check if CPR actions auto-populate is enabled
@@ -230,10 +235,8 @@ export class DnD5eCPRAutoPopulate {
         // Check if CPR module is active
         if (!this.isCPRActive()) return;
 
-        // Wait for grids to finish populating
-        // Grids populate with 50ms delays between them, so wait for all grids + passives + buffer
-        // This ensures quickAccess populates after grid 0, grid 1, grid 2, and passives
-        await new Promise(resolve => setTimeout(resolve, 200));
+        // NOTE: No delay needed here - when called via core's onTokenCreationComplete,
+        // all grids have already been populated and saved
 
         try {
             // Get CPR config for current rules version
@@ -260,10 +263,10 @@ export class DnD5eCPRAutoPopulate {
                     .slice(0, 6);
 
                 const actionUuids = actions.map(a => a.uuid);
-                await this.populateQuickAccess(actor, actionUuids);
+                await this.populateQuickAccess(actor, actionUuids, persistenceManager);
             } else {
                 // Use selected actions (respects GM's choices)
-                await this.populateQuickAccess(actor, selectedActions.slice(0, 6));
+                await this.populateQuickAccess(actor, selectedActions.slice(0, 6), persistenceManager);
             }
         } catch (error) {
             console.error('[bg3-hud-dnd5e] Error populating CPR actions on token creation:', error);

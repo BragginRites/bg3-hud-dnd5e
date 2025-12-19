@@ -62,6 +62,8 @@ export class DnD5eAutoPopulate extends AutoPopulateFramework {
     async getMatchingItems(actor, selectedTypes, options = {}) {
         const items = [];
         const includeActivities = options?.includeActivities ?? false;
+        const wantsSpells = selectedTypes.includes('spell');
+        const seenSpellUuids = new Set(); // Track spell source UUIDs to avoid duplicates
 
         for (const item of actor.items) {
             // Check if item matches any selected type
@@ -69,9 +71,22 @@ export class DnD5eAutoPopulate extends AutoPopulateFramework {
                 continue;
             }
 
-            // For spells, check preparation state
-            if (item.type === 'spell' && !this._isSpellUsable(actor, item)) {
-                continue;
+            // For spells, handle caching and Cast activity spells
+            if (item.type === 'spell') {
+                // Skip cached spell items (created from Cast activities) to avoid duplicates
+                // These spells are sourced from Cast activities on features like "Spellcasting"
+                const cachedFor = item.flags?.dnd5e?.cachedFor;
+                if (cachedFor) {
+                    // Track the source UUID so we don't add it again
+                    const sourceUuid = item._stats?.compendiumSource;
+                    if (sourceUuid) seenSpellUuids.add(sourceUuid);
+                    continue;
+                }
+
+                // Check preparation state for regular spells
+                if (!this._isSpellUsable(actor, item)) {
+                    continue;
+                }
             }
 
             // Spells bypass _hasActivities (v5.1 spells often have no activities)
@@ -102,7 +117,59 @@ export class DnD5eAutoPopulate extends AutoPopulateFramework {
             items.push({ uuid: item.uuid });
         }
 
+        // For spells, also find Cast activities on features (monster spellcasting)
+        // These are spells that haven't been cached yet (first use creates the cached copy)
+        if (wantsSpells) {
+            const castActivitySpells = await this._getSpellsFromCastActivities(actor, seenSpellUuids);
+            items.push(...castActivitySpells);
+        }
+
         return items;
+    }
+
+    /**
+     * Get spells from Cast activities on feature items (e.g., monster Spellcasting)
+     * In dnd5e v5+, monsters have Cast activities that reference spells by UUID.
+     * These spells appear in the spellbook when displayInSpellbook is true.
+     * @param {Actor} actor - The actor
+     * @param {Set<string>} seenSpellUuids - Set of already-seen spell UUIDs to avoid duplicates
+     * @returns {Promise<Array<{uuid: string, type?: string}>>}
+     * @private
+     */
+    async _getSpellsFromCastActivities(actor, seenSpellUuids) {
+        const spellItems = [];
+
+        // Look through all feature items for Cast activities
+        for (const item of actor.items) {
+            // Skip spell items (we already handled those)
+            if (item.type === 'spell') continue;
+
+            const activities = this._getActivities(item);
+
+            for (const activity of activities) {
+                // Check if this is a Cast activity that should display in spellbook
+                if (activity.type !== 'cast') continue;
+                if (!activity.displayInSpellbook) {
+                    continue;
+                }
+
+                // Get the referenced spell UUID
+                const spellUuid = activity.spell?.uuid;
+                if (!spellUuid) continue;
+
+                // Skip if we've already seen this spell (from cached copies or other activities)
+                if (seenSpellUuids.has(spellUuid)) continue;
+                seenSpellUuids.add(spellUuid);
+
+                // Add the Cast activity itself (it will be used to cast the spell)
+                spellItems.push({
+                    uuid: activity.uuid,
+                    type: 'Activity'
+                });
+            }
+        }
+
+        return spellItems;
     }
 
     /**
