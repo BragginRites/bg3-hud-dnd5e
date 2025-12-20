@@ -1,7 +1,9 @@
 /**
  * Rest Dialog
- * Uses DialogV2.wait() to let the player choose between Short Rest and Long Rest
+ * Uses Core's showButtonChoiceDialog for consistent styling
  */
+import { showButtonChoiceDialog } from '../../../../bg3-hud-core/scripts/utils/dialogs.js';
+
 const MODULE_ID = 'bg3-hud-dnd5e';
 
 /**
@@ -12,24 +14,21 @@ const MODULE_ID = 'bg3-hud-dnd5e';
 export async function showRestDialog(actor) {
     if (!actor) return;
 
-    const choice = await foundry.applications.api.DialogV2.wait({
-        window: { title: game.i18n.localize('BG3HUD.Rest') },
+    const choice = await showButtonChoiceDialog({
+        title: game.i18n.localize('BG3HUD.Rest'),
         content: `<p style="text-align:center;margin-bottom:1rem">${game.i18n.localize('BG3HUD.ChooseRestType')}</p>`,
         buttons: [
             {
                 action: 'short',
                 label: game.i18n.localize(`${MODULE_ID}.RestDialog.ShortRest`),
-                icon: 'fas fa-campfire',
-                callback: () => 'short'
+                icon: 'fas fa-campfire'
             },
             {
                 action: 'long',
                 label: game.i18n.localize(`${MODULE_ID}.RestDialog.LongRest`),
-                icon: 'fas fa-tent',
-                callback: () => 'long'
+                icon: 'fas fa-tent'
             }
-        ],
-        close: () => null
+        ]
     });
 
     if (choice === 'short' && typeof actor.shortRest === 'function') {

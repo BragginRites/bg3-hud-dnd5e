@@ -1,3 +1,8 @@
+## [0.1.8] - 2025-12-21
+### Changed
+- **Dialog Synchronization**: All dialogs are now synchronized to use consistent `DialogV2` styling and behavior (Issue #11).
+- **Manifest Updates**: Updated manifest URL to point to `latest` release for easier updates (Issue #10).
+
 ## [0.1.7] - 2025-12-20
 ### Changed
 - **DialogV2 Migration**: Updated dialogs to use core's new `DialogV2`-based utilities for consistent Foundry V13 styling:
