@@ -359,15 +359,6 @@ export function registerSettings() {
     ]
   });
 
-  const ThirdPartySettingsMenu = createSettingsSubmenu({
-    moduleId: MODULE_ID,
-    titleKey: `${MODULE_ID}.Settings.ThirdParty.MenuTitle`,
-    sections: [
-      { legend: `${MODULE_ID}.Settings.ThirdParty.CPR.Legend`, keys: ['enableCPRGenericActions', 'enableCPRActionsAutoPopulate', 'blockCPRActionsOnHotbar'] },
-      { legend: `${MODULE_ID}.Settings.ThirdParty.Midi.Legend`, keys: ['addAdvBtnsMidiQoL'] }
-    ]
-  });
-
   // Auto-populate configuration menu
   game.settings.registerMenu(MODULE_ID, 'autoPopulateConfigurationMenu', {
     name: `${MODULE_ID}.Settings.ConfigureAutoPopulateGrids`,
@@ -398,24 +389,52 @@ export function registerSettings() {
     restricted: true
   });
 
-  // Third-party modules submenu
-  game.settings.registerMenu(MODULE_ID, 'thirdPartySettingsMenu', {
-    name: `${MODULE_ID}.Settings.ThirdParty.MenuName`,
-    label: `${MODULE_ID}.Settings.ThirdParty.MenuLabel`,
-    hint: `${MODULE_ID}.Settings.ThirdParty.MenuHint`,
-    icon: 'fas fa-puzzle-piece',
-    type: ThirdPartySettingsMenu,
-    restricted: true
-  });
+  // Third-party modules submenu (only show if relevant modules are installed)
+  const hasCPR = game.modules.has('chris-premades');
+  const hasMidiQoL = game.modules.has('midi-qol');
 
-  // CPR Actions selection menu
-  game.settings.registerMenu(MODULE_ID, 'cprActionsSelectionMenu', {
-    name: `${MODULE_ID}.CPR.SelectActionsMenuName`,
-    label: `${MODULE_ID}.CPR.SelectActionsMenuLabel`,
-    hint: `${MODULE_ID}.CPR.SelectActionsMenuHint`,
-    icon: 'fas fa-list-check',
-    type: CPRActionsSelectionMenu,
-    restricted: true
-  });
+  if (hasCPR || hasMidiQoL) {
+    // Build sections dynamically based on installed modules
+    const thirdPartySections = [];
+
+    if (hasCPR) {
+      thirdPartySections.push({
+        legend: `${MODULE_ID}.Settings.ThirdParty.CPR.Legend`,
+        keys: ['enableCPRGenericActions', 'enableCPRActionsAutoPopulate', 'blockCPRActionsOnHotbar'],
+        buttons: [
+          {
+            id: 'cprActionsSelect',
+            name: `${MODULE_ID}.CPR.SelectActionsMenuName`,
+            label: `${MODULE_ID}.CPR.SelectActionsMenuLabel`,
+            icon: 'fas fa-list-check',
+            hint: `${MODULE_ID}.CPR.SelectActionsMenuHint`,
+            onClick: () => new CPRActionsSelectionMenu().render(true)
+          }
+        ]
+      });
+    }
+
+    if (hasMidiQoL) {
+      thirdPartySections.push({
+        legend: `${MODULE_ID}.Settings.ThirdParty.Midi.Legend`,
+        keys: ['addAdvBtnsMidiQoL']
+      });
+    }
+
+    const ThirdPartySettingsMenu = createSettingsSubmenu({
+      moduleId: MODULE_ID,
+      titleKey: `${MODULE_ID}.Settings.ThirdParty.MenuTitle`,
+      sections: thirdPartySections
+    });
+
+    game.settings.registerMenu(MODULE_ID, 'thirdPartySettingsMenu', {
+      name: `${MODULE_ID}.Settings.ThirdParty.MenuName`,
+      label: `${MODULE_ID}.Settings.ThirdParty.MenuLabel`,
+      hint: `${MODULE_ID}.Settings.ThirdParty.MenuHint`,
+      icon: 'fas fa-puzzle-piece',
+      type: ThirdPartySettingsMenu,
+      restricted: true
+    });
+  }
 }
 

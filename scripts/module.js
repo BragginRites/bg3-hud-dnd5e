@@ -108,7 +108,10 @@ Hooks.on('bg3HudReady', async (BG3HUD_API) => {
 
     // Create and register the adapter instance
     const adapter = new DnD5eAdapter();
-    BG3HUD_API.registerAdapter(adapter);
+    BG3HUD_API.registerAdapter(adapter, {
+        // CSS classes to filter from UI element tooltips (core's TooltipManager uses this)
+        tooltipClassBlacklist: ['dnd5e2', 'dnd5e-tooltip', 'item-tooltip']
+    });
 
     // Register D&D 5e menu builder
     BG3HUD_API.registerMenuBuilder('dnd5e', DnD5eMenuBuilder, { adapter: adapter });
