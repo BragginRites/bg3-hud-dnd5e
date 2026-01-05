@@ -1,3 +1,9 @@
+## [0.2.0] - 2026-01-05
+
+### Fixed
+- **Melee Weapon Range**: Fixed melee weapons not showing range indicator. Now correctly uses `reach` value or defaults to 5ft for melee action types.
+- **Touch Spell Range**: Touch range now returns 1 grid square instead of feet.
+
 ## [0.1.11] - 2026-01-05
 
 ### Fixed

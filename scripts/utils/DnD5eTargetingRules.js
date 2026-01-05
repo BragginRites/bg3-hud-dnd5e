@@ -308,7 +308,18 @@ export function calculateRange({ item, activity = null, actor = null }) {
     // Get range configuration from activity or item
     const rangeConfig = activity?.range || item.system?.range;
 
-    if (!rangeConfig) return rangeInfo;
+    // Fallback for melee attacks without explicit range config
+    // Melee weapons in D&D5e may not have range specified - default to 1 grid square (5ft or reach)
+    if (!rangeConfig) {
+        const actionType = activity?.actionType || item.system?.actionType;
+        if (['mwak', 'msak', 'mpak'].includes(actionType)) {
+            // Melee attack - default to 1 grid square
+            rangeInfo.range = 1;
+            rangeInfo.rangeInFeet = canvas?.scene?.grid?.distance || 5;
+            return rangeInfo;
+        }
+        return rangeInfo;
+    }
 
     // Handle special range units
     const units = rangeConfig.units || 'ft';
@@ -342,8 +353,23 @@ export function calculateRange({ item, activity = null, actor = null }) {
     }
 
     // Get numeric range values
+    // For melee weapons, 'reach' contains the melee range, 'value' is for thrown/ranged
     let range = rangeConfig.value || rangeConfig.normal || 0;
     let longRange = rangeConfig.long || 0;
+
+    // Fallback to reach for melee weapons without ranged capability
+    // Melee weapons have reach (default 5ft) but may not have value set
+    if (!range && rangeConfig.reach) {
+        range = rangeConfig.reach;
+    }
+
+    // If still no range, check if this is a melee action type and default to 5ft
+    if (!range) {
+        const actionType = activity?.actionType || item.system?.actionType;
+        if (['mwak', 'msak', 'mpak'].includes(actionType)) {
+            range = canvas?.scene?.grid?.distance || 5; // Default melee reach
+        }
+    }
 
     // Convert units if needed
     if (units === 'mi') {
