@@ -9,7 +9,7 @@
 export async function createDnD5eWeaponSetContainer() {
     // Import base WeaponSetContainer from core
     const { WeaponSetContainer } = await import('../../../../bg3-hud-core/scripts/components/containers/WeaponSetContainer.js');
-    
+
     return class DnD5eWeaponSetContainer extends WeaponSetContainer {
         constructor(options = {}) {
             super(options);
@@ -23,14 +23,14 @@ export async function createDnD5eWeaponSetContainer() {
          */
         async _isTwoHandedWeapon(cellData) {
             if (!cellData?.uuid) return false;
-            
+
             try {
                 const item = await fromUuid(cellData.uuid);
                 if (!item) return false;
-                
+
                 // Check if it's a weapon
                 if (item.type !== 'weapon') return false;
-                
+
                 // Check for two-handed property
                 // D&D 5e v5+: properties is a Set
                 const properties = item.system?.properties;
@@ -44,7 +44,7 @@ export async function createDnD5eWeaponSetContainer() {
                     }
                     return properties.two === true;
                 }
-                
+
                 return false;
             } catch (error) {
                 console.warn('BG3 HUD D&D 5e | Error checking two-handed weapon:', error);
@@ -59,11 +59,46 @@ export async function createDnD5eWeaponSetContainer() {
         async render() {
             // Call parent render first
             await super.render();
-            
+
+            // Wrap grid container render methods to ensure two-handed weapons update
+            this._wrapGridContainerRenders();
+
             // Process each weapon set for two-handed weapons
             await this._updateTwoHandedWeapons();
-            
+
             return this.element;
+        }
+
+        /**
+         * Wrap GridContainer render methods to ensure two-handed weapon display
+         * is updated after any render (including those triggered by UpdateCoordinator).
+         * This fixes the bug where offhand slot disappears after attacking with
+         * two-handed weapons, due to actor updates triggering GridContainer.render()
+         * which bypasses our _updateTwoHandedWeapons() override.
+         * @private
+         */
+        _wrapGridContainerRenders() {
+            for (let setIndex = 0; setIndex < this.gridContainers.length; setIndex++) {
+                const gridContainer = this.gridContainers[setIndex];
+
+                // Skip if already wrapped
+                if (gridContainer._bg3TwoHandedWrapped) continue;
+
+                // Store reference to this WeaponSetContainer and the original render
+                const weaponSetContainer = this;
+                const originalRender = gridContainer.render.bind(gridContainer);
+
+                // Wrap the render method
+                gridContainer.render = async function () {
+                    const result = await originalRender();
+                    // After render completes, update two-handed weapon display for this set
+                    await weaponSetContainer._updateSetTwoHandedWeapons(this);
+                    return result;
+                };
+
+                // Mark as wrapped to prevent re-wrapping
+                gridContainer._bg3TwoHandedWrapped = true;
+            }
         }
 
         /**
@@ -85,12 +120,12 @@ export async function createDnD5eWeaponSetContainer() {
         async _updateSetTwoHandedWeapons(gridContainer) {
             // Only process if this is a 2-slot weapon set (1 row, 2 cols)
             if (gridContainer.rows !== 1 || gridContainer.cols !== 2) return;
-            
+
             const leftCell = gridContainer.getCell(0, 0);  // Left slot (col 0, row 0)
             const rightCell = gridContainer.getCell(1, 0); // Right slot (col 1, row 0)
-            
+
             if (!leftCell || !rightCell) return;
-            
+
             // Check left slot for two-handed weapon
             if (leftCell.data && await this._isTwoHandedWeapon(leftCell.data)) {
                 // Duplicate to right slot with special marker
@@ -119,7 +154,7 @@ export async function createDnD5eWeaponSetContainer() {
          */
         async updateSet(setIndex, newData) {
             await super.updateSet(setIndex, newData);
-            
+
             // Update two-handed weapon display
             const gridContainer = this.gridContainers[setIndex];
             if (gridContainer) {

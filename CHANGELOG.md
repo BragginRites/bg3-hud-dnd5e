@@ -1,3 +1,8 @@
+## [0.2.1] - 2026-01-10
+
+### Fixed
+- **Portrait Alignment**: Fixed portrait position to properly align with the bottom of the hotbar.
+
 ## [0.2.0] - 2026-01-05
 
 ### Fixed

@@ -20,6 +20,7 @@ import { renderDnD5eTooltip } from './utils/tooltipRenderer.js';
 import { DnD5eMenuBuilder } from './components/menus/DnD5eMenuBuilder.js';
 import { DnD5eTargetingRules } from './utils/DnD5eTargetingRules.js';
 
+
 const MODULE_ID = 'bg3-hud-dnd5e';
 const ADVANTAGE_ROLL_EVENTS = [
     'dnd5e.preRollAttackV2',
@@ -142,6 +143,8 @@ Hooks.on('bg3HudReady', async (BG3HUD_API) => {
 
     // Register advantage/disadvantage hooks once
     registerAdvantageHooks();
+
+
 });
 
 /**
