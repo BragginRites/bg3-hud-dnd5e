@@ -220,6 +220,16 @@ export function registerSettings() {
     default: true
   });
 
+  // Show HP controls (kill/heal buttons) setting
+  game.settings.register(MODULE_ID, 'showHPControls', {
+    name: `${MODULE_ID}.Settings.ShowHPControls`,
+    hint: `${MODULE_ID}.Settings.ShowHPControlsHint`,
+    scope: 'client',
+    config: false,
+    type: Boolean,
+    default: true
+  });
+
   // CPR Generic Actions button setting (vertical button next to adv container)
   game.settings.register(MODULE_ID, 'enableCPRGenericActions', {
     name: `${MODULE_ID}.Settings.EnableCPRGenericActions`,
@@ -347,7 +357,7 @@ export function registerSettings() {
     moduleId: MODULE_ID,
     titleKey: `${MODULE_ID}.Settings.Display.MenuTitle`,
     sections: [
-      { legend: `${MODULE_ID}.Settings.Display.Legend`, keys: ['showItemNames', 'showItemUses', 'showHealthOverlay'] }
+      { legend: `${MODULE_ID}.Settings.Display.Legend`, keys: ['showItemNames', 'showItemUses', 'showHealthOverlay', 'showHPControls'] }
     ]
   });
 

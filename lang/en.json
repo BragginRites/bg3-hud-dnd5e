@@ -20,6 +20,8 @@
       "ShowItemUsesHint": "Display remaining uses on items that have limited uses",
       "ShowHealthOverlay": "Show Health Overlay",
       "ShowHealthOverlayHint": "Display red damage overlay on portrait images",
+      "ShowHPControls": "Show HP Control Buttons",
+      "ShowHPControlsHint": "Display the kill (skull) and heal (heart) buttons on the portrait HP controls",
       "EnableCPRGenericActions": "Enable CPR Generic Actions Button",
       "EnableCPRGenericActionsHint": "Show a vertical button next to the advantage container that triggers CPR's Generic Actions (2024) dialog",
       "EnableCPRActionsAutoPopulate": "Enable CPR Actions Auto-Populate",

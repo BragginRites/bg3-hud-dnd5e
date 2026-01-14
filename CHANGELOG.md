@@ -1,4 +1,7 @@
-## [0.2.1] - 2026-01-10
+## [0.2.2] - 2026-01-14
+
+### Added
+- **Show HP Control Buttons Setting**: New option in Display Settings to toggle visibility of the kill (skull) and heal (heart) buttons on the portrait. The HP input field remains visible when disabled. (Issue #21)
 
 ### Fixed
 - **Portrait Alignment**: Fixed portrait position to properly align with the bottom of the hotbar.

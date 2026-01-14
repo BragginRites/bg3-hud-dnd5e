@@ -93,24 +93,29 @@ export async function createDnD5ePortraitContainer() {
             if (hpControls) {
                 const hpControlsDiv = this.createElement('div', ['hp-controls']);
 
-                // Death button (set HP and temp HP to 0)
-                const deathBtn = this.createElement('div', ['hp-control-death']);
-                // Mark as UI element to prevent system tooltips (dnd5e2, etc.) from showing
-                deathBtn.dataset.bg3Ui = 'true';
-                deathBtn.innerHTML = `<i class="fas fa-skull" data-tooltip="${game.i18n.localize('bg3-hud-dnd5e.Portrait.SetTo0HP')}"></i>`;
-                this.addEventListener(deathBtn, 'click', async (event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    if (this.actor.system.attributes.hp.value > 0 || this.actor.system.attributes.hp.temp > 0) {
-                        await this.actor.update({
-                            'system.attributes.hp.value': 0,
-                            'system.attributes.hp.temp': 0
-                        });
-                    }
-                });
-                hpControlsDiv.appendChild(deathBtn);
+                // Check if HP control buttons (kill/heal) should be shown
+                const showHPControlButtons = game.settings.get('bg3-hud-dnd5e', 'showHPControls') ?? true;
 
-                // HP Input field
+                // Death button (set HP and temp HP to 0) - only if setting enabled
+                if (showHPControlButtons) {
+                    const deathBtn = this.createElement('div', ['hp-control-death']);
+                    // Mark as UI element to prevent system tooltips (dnd5e2, etc.) from showing
+                    deathBtn.dataset.bg3Ui = 'true';
+                    deathBtn.innerHTML = `<i class="fas fa-skull" data-tooltip="${game.i18n.localize('bg3-hud-dnd5e.Portrait.SetTo0HP')}"></i>`;
+                    this.addEventListener(deathBtn, 'click', async (event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        if (this.actor.system.attributes.hp.value > 0 || this.actor.system.attributes.hp.temp > 0) {
+                            await this.actor.update({
+                                'system.attributes.hp.value': 0,
+                                'system.attributes.hp.temp': 0
+                            });
+                        }
+                    });
+                    hpControlsDiv.appendChild(deathBtn);
+                }
+
+                // HP Input field (always shown when user can modify)
                 const hpInput = this.createElement('input', ['hp-input']);
                 hpInput.type = 'text';
                 hpInput.value = health.current + health.temp;
@@ -148,19 +153,21 @@ export async function createDnD5ePortraitContainer() {
 
                 hpControlsDiv.appendChild(hpInput);
 
-                // Full heal button
-                const fullBtn = this.createElement('div', ['hp-control-full']);
-                // Mark as UI element to prevent system tooltips (dnd5e2, etc.) from showing
-                fullBtn.dataset.bg3Ui = 'true';
-                fullBtn.innerHTML = `<i class="fas fa-heart" data-tooltip="${game.i18n.localize('bg3-hud-dnd5e.Portrait.FullHeal')}"></i>`;
-                this.addEventListener(fullBtn, 'click', async (event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    if (this.actor.system.attributes.hp.value < this.actor.system.attributes.hp.max) {
-                        await this.actor.update({ 'system.attributes.hp.value': this.actor.system.attributes.hp.max });
-                    }
-                });
-                hpControlsDiv.appendChild(fullBtn);
+                // Full heal button - only if setting enabled
+                if (showHPControlButtons) {
+                    const fullBtn = this.createElement('div', ['hp-control-full']);
+                    // Mark as UI element to prevent system tooltips (dnd5e2, etc.) from showing
+                    fullBtn.dataset.bg3Ui = 'true';
+                    fullBtn.innerHTML = `<i class="fas fa-heart" data-tooltip="${game.i18n.localize('bg3-hud-dnd5e.Portrait.FullHeal')}"></i>`;
+                    this.addEventListener(fullBtn, 'click', async (event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        if (this.actor.system.attributes.hp.value < this.actor.system.attributes.hp.max) {
+                            await this.actor.update({ 'system.attributes.hp.value': this.actor.system.attributes.hp.max });
+                        }
+                    });
+                    hpControlsDiv.appendChild(fullBtn);
+                }
 
                 this.element.appendChild(hpControlsDiv);
             }
