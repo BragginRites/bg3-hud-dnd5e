@@ -61,7 +61,7 @@
         "MenuLabel": "Third-Party Modules",
         "MenuHint": "Configure integration with third-party modules like CPR and Midi-QoL",
         "CPR": {
-          "Legend": "Chris's Premades (CPR)"
+          "Legend": "Cauldron of Plentiful Resources (CPR)"
         },
         "Midi": {
           "Legend": "Midi-QoL"
@@ -178,7 +178,7 @@
       "SelectActionsMenuName": "Select CPR Actions",
       "SelectActionsMenuLabel": "Select CPR Actions",
       "SelectActionsMenuHint": "Choose which CPR Generic Actions to display in quick access (up to 6, based on Rules Version)",
-      "NoActionsAvailable": "No CPR actions available. Make sure Chris's Premades module is installed and the appropriate CPRActions compendium exists for your Rules Version.",
+      "NoActionsAvailable": "No CPR actions available. Make sure Cauldron of Plentiful Resources module is installed and the appropriate CPRActions compendium exists for your Rules Version.",
       "MaxSelectionsReached": "Maximum of {max} actions can be selected",
       "SelectionCounter": "Selected: {current} / {max}"
     },
@@ -189,9 +189,9 @@
       "ItemNotFound": "Item not found",
       "ItemCannotBeUsed": "Item cannot be used",
       "MacroNotFound": "Macro not found",
-      "CPRGenericActionsNotFound": "CPR Generic Actions (2024) item not found. Make sure Chris's Premades module is installed and active.",
+      "CPRGenericActionsNotFound": "CPR Generic Actions (2024) item not found. Make sure Cauldron of Plentiful Resources module is installed and active.",
       "CPRGenericActionsError": "Error using CPR Generic Actions",
-      "CPRModuleNotActive": "Chris's Premades module is not active. Please enable it to use CPR features.",
+      "CPRModuleNotActive": "Cauldron of Plentiful Resources module is not active. Please enable it to use CPR features.",
       "CPRActionsSelectionSaved": "CPR actions selection saved",
       "CPRActionNotFound": "CPR action not found",
       "CPRActionError": "Error using CPR action",
