@@ -2,7 +2,7 @@
   "id": "bg3-hud-dnd5e",
   "title": "BG3 Inspired HUD - D&D5e",
   "description": "A D&D 5e integration module for the BG3 Inspired HUD. This module adapts the core HUD functionality for the D&D 5e system, providing token-specific HUD elements for abilities, spells, and effects.",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "authors": [
     {
       "name": "BragginRites",
@@ -33,7 +33,7 @@
         "id": "bg3-hud-core",
         "type": "module",
         "compatibility": {
-          "minimum": "0.2.3"
+          "minimum": "0.2.4"
         }
       }
     ],
@@ -43,7 +43,7 @@
         "type": "system",
         "compatibility": {
           "minimum": "5",
-          "verified": "5.2.3"
+          "verified": "5.3.0"
         }
       }
     ]

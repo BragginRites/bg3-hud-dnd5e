@@ -81,11 +81,7 @@ export class DnD5eInfoContainer extends InfoContainer {
         this.selectedAbility = abilityId;
         
         // Re-render the panel content with filtered skills/saves
-        if (this.panel) {
-            this.panel.innerHTML = '';
-            const content = await this.renderContent();
-            this.panel.appendChild(content);
-        }
+        await this.update();
     }
 
     /**
@@ -96,11 +92,7 @@ export class DnD5eInfoContainer extends InfoContainer {
         this.selectedAbility = null;
         
         // Re-render to hide skills/saves
-        if (this.panel) {
-            this.panel.innerHTML = '';
-            const content = await this.renderContent();
-            this.panel.appendChild(content);
-        }
+        await this.update();
     }
 
     /**
@@ -124,6 +116,7 @@ export class DnD5eInfoContainer extends InfoContainer {
         for (const abilityId of abilities) {
             const ability = this.actor.system.abilities[abilityId];
             const modifier = ability?.mod || 0;
+            const score = ability?.value || 10;
 
             const abilityDiv = this.createElement('div', ['bg3-info-ability']);
             
@@ -134,6 +127,9 @@ export class DnD5eInfoContainer extends InfoContainer {
             
             const nameSpan = this.createElement('span', ['bg3-info-ability-name']);
             nameSpan.textContent = abilityNames[abilityId];
+
+            const scoreSpan = this.createElement('span', ['bg3-info-ability-score']);
+            scoreSpan.textContent = score;
 
             const modifierSpan = this.createElement('span', ['bg3-info-ability-modifier']);
             if (modifier >= 0) {
@@ -173,6 +169,7 @@ export class DnD5eInfoContainer extends InfoContainer {
             });
 
             abilityDiv.appendChild(nameSpan);
+            abilityDiv.appendChild(scoreSpan);
             abilityDiv.appendChild(modifierSpan);
             column.appendChild(abilityDiv);
         }
@@ -218,6 +215,16 @@ export class DnD5eInfoContainer extends InfoContainer {
             const nameSpan = this.createElement('span', ['bg3-info-skill-name']);
             // Use system's localized label
             nameSpan.textContent = skillConfig.label || skillId;
+
+            // Add proficiency classes for border coloring
+            const prof = skill?.value || 0;
+            if (prof === 2) {
+                skillDiv.classList.add('expertise');
+            } else if (prof === 1) {
+                skillDiv.classList.add('proficient');
+            } else if (prof === 0.5) {
+                skillDiv.classList.add('half-proficient');
+            }
 
             const modifierSpan = this.createElement('span', ['bg3-info-skill-modifier']);
             if (total >= 0) {
@@ -286,37 +293,38 @@ export class DnD5eInfoContainer extends InfoContainer {
         };
 
         for (const abilityId of abilities) {
-            // Only show for selected ability
-            if (abilityId !== this.selectedAbility) {
-                continue;
-            }
+            const isSelected = abilityId === this.selectedAbility;
             const ability = this.actor.system.abilities[abilityId];
-            
-            // Ability Check
-            const checkDiv = this.createElement('div', ['bg3-info-check']);
-            
-            const checkNameSpan = this.createElement('span', ['bg3-info-check-name']);
-            checkNameSpan.textContent = game.i18n.format(`${MODULE_ID}.Info.CheckFormat`, { ability: abilityNames[abilityId] });
-            
-            const checkModifierSpan = this.createElement('span', ['bg3-info-check-modifier']);
-            const checkMod = ability?.mod ?? 0;
-            if (checkMod >= 0) {
-                checkModifierSpan.classList.add('positive');
+
+            // In dnd5e v5+, ability.save is an object with .value
+            const saveRaw = ability?.save;
+            const saveValue = typeof saveRaw === 'object' ? (saveRaw?.value ?? saveRaw?.mod ?? 0) : (saveRaw ?? 0);
+
+            // Single row per ability: left-click = check, right-click = save
+            const row = this.createElement('div', ['bg3-info-save']);
+
+            // Add proficiency classes for border coloring
+            const prof = ability?.proficient || 0;
+            if (prof === 1) {
+                row.classList.add('proficient');
             }
-            checkModifierSpan.textContent = checkMod;
-            
-            // Click to roll ability check
-            this.addEventListener(checkDiv, 'click', (e) => {
+
+            const nameSpan = this.createElement('span', ['bg3-info-save-name']);
+            nameSpan.textContent = abilityNames[abilityId];
+            row.appendChild(nameSpan);
+
+            const modSpan = this.createElement('span', ['bg3-info-save-modifier']);
+            if (saveValue >= 0) {
+                modSpan.classList.add('positive');
+            }
+            modSpan.textContent = saveValue;
+            row.appendChild(modSpan);
+
+            // Left-click → ability check
+            this.addEventListener(row, 'click', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                
-                if (!this.actor?.system?.abilities?.[abilityId]) {
-                    console.warn('DnD5e Info | Ability data not ready for check', { abilityId });
-                    return;
-                }
-                
                 try {
-                    // v5+ API - pass event and modifier keys
                     this.actor.rollAbilityCheck({
                         ability: abilityId,
                         event: e,
@@ -328,45 +336,12 @@ export class DnD5eInfoContainer extends InfoContainer {
                     console.error('DnD5e Info | Ability check roll failed', { abilityId, error: err });
                 }
             });
-            
-            checkDiv.appendChild(checkNameSpan);
-            checkDiv.appendChild(checkModifierSpan);
-            column.appendChild(checkDiv);
-            
-            // Saving Throw
-            // Calculate save bonus: ability mod + proficiency (if proficient)
-            let saveValue = ability?.mod ?? 0;
-            
-            // Check if proficient in this save (proficient is directly on ability)
-            const saveProficiency = ability?.proficient ?? 0;
-            if (saveProficiency > 0) {
-                const profBonus = this.actor.system.attributes?.prof ?? 0;
-                saveValue += profBonus * saveProficiency; // saveProficiency can be 0.5, 1, or 2 (half, full, expertise)
-            }
 
-            const saveDiv = this.createElement('div', ['bg3-info-save']);
-
-            const saveNameSpan = this.createElement('span', ['bg3-info-save-name']);
-            saveNameSpan.textContent = game.i18n.format(`${MODULE_ID}.Info.SaveFormat`, { ability: abilityNames[abilityId] });
-
-            const saveModifierSpan = this.createElement('span', ['bg3-info-save-modifier']);
-            if (saveValue >= 0) {
-                saveModifierSpan.classList.add('positive');
-            }
-            saveModifierSpan.textContent = saveValue;
-
-            // Click to roll saving throw (v5+ only)
-            this.addEventListener(saveDiv, 'click', (e) => {
+            // Right-click → saving throw
+            this.addEventListener(row, 'contextmenu', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                
-                if (!this.actor?.system?.abilities?.[abilityId]) {
-                    console.warn('DnD5e Info | Ability data not ready for save', { abilityId });
-                    return;
-                }
-                
                 try {
-                    // v5+ API - pass event and modifier keys
                     this.actor.rollSavingThrow({
                         ability: abilityId,
                         event: e,
@@ -379,9 +354,7 @@ export class DnD5eInfoContainer extends InfoContainer {
                 }
             });
 
-            saveDiv.appendChild(saveNameSpan);
-            saveDiv.appendChild(saveModifierSpan);
-            column.appendChild(saveDiv);
+            column.appendChild(row);
         }
 
         return column;

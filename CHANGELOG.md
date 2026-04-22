@@ -1,3 +1,17 @@
+## [0.2.5] - 2026-04-22
+
+### Added
+- **Simplified Saves**: Refactored the saves column to show one row per ability.
+  - **Left-click**: Rolls an Ability Check.
+  - **Right-click**: Rolls a Saving Throw.
+- **Proficiency Borders**: Swapped proficiency icons for colored borders (Blue=Proficient, Gold=Expertise, Silver=Jack of all Trades).
+- **Ability Scores**: Added display of raw ability scores alongside modifiers.
+
+### Fixed
+- **Object Object Bug**: Fixed saving throw modifiers displaying as `[object Object]` in DnD5e v5+.
+- **UX Polish**: Removed redundant highlighting of the save row when an ability is selected in the middle column.
+- **Saving Throw Accuracy**: Switched to using system-provided save values to correctly account for all bonuses (magic items, class features, etc.).
+
 ## [0.2.4] - 2026-01-28
 
 ### Fixed
