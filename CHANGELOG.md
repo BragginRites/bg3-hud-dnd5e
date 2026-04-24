@@ -1,3 +1,12 @@
+## [0.2.6] - 2026-04-24
+
+### Changed
+- **Info Panel Redesign**: Complete overhaul of the character info panel with a minimalist, at-a-glance layout.
+  - Replaced ability labels with static score columns and d20 modifier overlays.
+  - Simplified skills grid into a 3-column layout.
+  - Proficiency indicators using color-coded d20 icons with black outlines for readability.
+- **UI Localization**: Updated localization for settings, context menus, and tooltips, and others.
+
 ## [0.2.5] - 2026-04-22
 
 ### Added

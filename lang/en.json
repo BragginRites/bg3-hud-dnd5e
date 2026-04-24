@@ -136,7 +136,9 @@
         "Survival": "Survival"
       },
       "CheckFormat": "{ability} Check",
-      "SaveFormat": "{ability} Save"
+      "SaveFormat": "{ability} Save",
+      "CheckTooltip": "Left-click: Ability Check",
+      "SaveTooltip": "Right-click: Saving Throw"
     },
     "Portrait": {
       "SetTo0HP": "Set to 0 HP",
