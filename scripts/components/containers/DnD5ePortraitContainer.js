@@ -282,9 +282,6 @@ export async function createDnD5ePortraitContainer() {
         isVisible() {
             if (!this.actor || this.actor.type !== 'character') return false;
             
-            // Check setting
-            if (game.settings.get('bg3-hud-dnd5e', 'hideDeathSaves')) return false;
-            
             const currentHP = this.actor.system.attributes?.hp?.value || 0;
             return currentHP <= 0;
         }
@@ -333,9 +330,11 @@ export async function createDnD5ePortraitContainer() {
             this.element.style.opacity = '1';
 
             const deathData = this.getDeathSaveData();
+            const hidePips = game.settings.get('bg3-hud-dnd5e', 'hideDeathSaves');
 
             // Success boxes (3 boxes, filled from bottom up: index 0 = bottom/closest to skull)
             const successGroup = this.createElement('div', ['death-saves-group']);
+            if (hidePips) successGroup.style.display = 'none';
             for (let i = 2; i >= 0; i--) {
                 const box = this.createElement('div', ['death-save-box', 'success']);
                 const successNeeded = i + 1; // How many successes to mark this box (1, 2, or 3)
@@ -378,6 +377,7 @@ export async function createDnD5ePortraitContainer() {
 
             // Failure boxes (3 boxes, filled from left to right)
             const failureGroup = this.createElement('div', ['death-saves-group']);
+            if (hidePips) failureGroup.style.display = 'none';
             for (let i = 0; i < 3; i++) {
                 const box = this.createElement('div', ['death-save-box', 'failure']);
                 if (i < deathData.failure) {
@@ -435,6 +435,12 @@ export async function createDnD5ePortraitContainer() {
             // Force reflow to ensure opacity 0 is applied before transition
             void this.element.offsetHeight;
             this.element.style.opacity = '1';
+
+            const hidePips = game.settings.get('bg3-hud-dnd5e', 'hideDeathSaves');
+            const groups = this.element.querySelectorAll('.death-saves-group');
+            groups.forEach(g => {
+                g.style.display = hidePips ? 'none' : 'flex';
+            });
 
             const deathData = this.getDeathSaveData();
 
