@@ -1,3 +1,11 @@
+## [0.2.7] - 2026-04-25
+
+### Added
+- **Português (Brasil) Translation**: Added full localization support for Brazilian Portuguese, thanks to **Kharmans**.
+
+### Fixed
+- **Manifest URLs**: Updated manifest and download URLs in `module.json` to ensure correct update path for users.
+
 ## [0.2.6] - 2026-04-24
 
 ### Changed
