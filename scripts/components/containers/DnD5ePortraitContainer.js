@@ -505,12 +505,16 @@ export async function createDnD5ePortraitContainer() {
 
             try {
                 // Roll death save with appropriate modifiers
-                const roll = await this.actor.rollDeathSave({
+                const hidePips = game.settings.get('bg3-hud-dnd5e', 'hideDeathSaves');
+                const rollOptions = {
                     event: event,
                     advantage: event.altKey,
                     disadvantage: event.ctrlKey,
                     fastForward: event.shiftKey
-                });
+                };
+                const messageOptions = hidePips ? { rollMode: 'blindroll' } : {};
+                
+                const roll = await this.actor.rollDeathSave(rollOptions, {}, messageOptions);
 
                 if (roll) {
                     // Update display after roll
