@@ -8,7 +8,7 @@
   "bg3-hud-dnd5e": {
     "Settings": {
       "AutoPopulateConfiguration": "Configuração de Auto-Preenchimento",
-      "ConfigureAutoPopulateGrids": "Configurar Grades de Auto-Preenchimento",
+      "ConfigureAutoPopulateGrids": "Configurar Auto-Preenchimento de Grades",
       "ConfigureGrids": "Configurar Grades",
       "ConfigureGridsHint": "Configure quais tipos de itens serão automaticamente adicionados em cada grade ao criar um token",
       "ConfigureAutoPopulateDescription": "Atribua tipos de itens às grades da hotbar para <strong>apenas PNJs</strong>. Cada tipo só pode ser atribuído a uma grade.<br><small>Nota: Personagens de jogador devem usar clique direito → Auto-Preencher Contêiner.</small>",
