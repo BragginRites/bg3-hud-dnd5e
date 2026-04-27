@@ -645,7 +645,7 @@ export async function createDnD5ePortraitContainer() {
             }
 
             if (!this.token || !this.actor) {
-                console.warn('DnD5ePortraitContainer | No token or actor provided');
+                console.warn('[bg3-hud-dnd5e] DnD5ePortraitContainer | No token or actor provided');
                 return this.element;
             }
 
@@ -659,7 +659,7 @@ export async function createDnD5ePortraitContainer() {
                     const infoElement = await this.infoContainer.render();
                     this.element.appendChild(infoElement);
                 } catch (e) {
-                    console.warn('DnD5ePortraitContainer | Failed to render info container', e);
+                    console.warn('[bg3-hud-dnd5e] DnD5ePortraitContainer | Failed to render info container', e);
                 }
             }
 
