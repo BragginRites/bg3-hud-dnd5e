@@ -579,13 +579,23 @@ export async function createDnD5ePortraitContainer() {
         }
 
         /**
+         * Resolve whether this actor should use token art.
+         * Actor flags override the client default setting.
+         * @returns {boolean}
+         */
+        _useTokenImage() {
+            const actorPreference = this.actor?.getFlag('bg3-hud-dnd5e', 'useTokenImage');
+            if (actorPreference !== undefined) return actorPreference;
+            return game.settings.get('bg3-hud-dnd5e', 'defaultPortraitImageSource') !== 'portrait';
+        }
+
+        /**
          * Get portrait image URL
-         * Defaults to token image unless explicitly set to use actor portrait
+         * Defaults to the client setting unless explicitly set on the actor.
          * @returns {string} Image URL
          */
         getPortraitImage() {
-            // Check saved preference (undefined means use default: token image)
-            const useTokenImage = this.actor?.getFlag('bg3-hud-dnd5e', 'useTokenImage') ?? true;
+            const useTokenImage = this._useTokenImage();
 
             if (useTokenImage) {
                 return this.token?.document?.texture?.src || this.actor?.img || '';
@@ -604,7 +614,7 @@ export async function createDnD5ePortraitContainer() {
                 return { enabled: false, scale: 1 };
             }
 
-            const useTokenImage = this.actor.getFlag('bg3-hud-dnd5e', 'useTokenImage') ?? true;
+            const useTokenImage = this._useTokenImage();
             const scaleWithToken = this.actor.getFlag('bg3-hud-dnd5e', 'scaleWithToken') ?? false;
             const tokenScale = this.token?.document?._source?.texture?.scaleX ?? 1;
 
@@ -623,7 +633,7 @@ export async function createDnD5ePortraitContainer() {
             if (!this.actor) return;
 
             // Get current preference
-            const currentPreference = this.actor.getFlag('bg3-hud-dnd5e', 'useTokenImage') ?? true;
+            const currentPreference = this._useTokenImage();
 
             // Toggle the preference
             const newPreference = !currentPreference;

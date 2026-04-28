@@ -18,8 +18,10 @@ export class DnD5eMenuBuilder extends MenuBuilder {
         const token = portraitContainer.token;
         if (!actor) return [];
 
-        // Get current preferences from actor flags
-        const useTokenImage = actor.getFlag(MODULE_ID, 'useTokenImage') ?? true;
+        // Get current preferences from actor flags, falling back to the client default.
+        const actorImagePreference = actor.getFlag(MODULE_ID, 'useTokenImage');
+        const defaultUseTokenImage = game.settings.get(MODULE_ID, 'defaultPortraitImageSource') !== 'portrait';
+        const useTokenImage = actorImagePreference !== undefined ? actorImagePreference : defaultUseTokenImage;
         const scaleWithToken = actor.getFlag(MODULE_ID, 'scaleWithToken') ?? false;
         
         // Check if token has non-default scale

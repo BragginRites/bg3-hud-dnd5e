@@ -220,6 +220,21 @@ export function registerSettings() {
     default: true
   });
 
+  // Default portrait image source when actor has no explicit preference
+  game.settings.register(MODULE_ID, 'defaultPortraitImageSource', {
+    name: `${MODULE_ID}.Settings.DefaultPortraitImageSource`,
+    hint: `${MODULE_ID}.Settings.DefaultPortraitImageSourceHint`,
+    scope: 'client',
+    config: false,
+    type: String,
+    choices: {
+      token: `${MODULE_ID}.Settings.PortraitSourceToken`,
+      portrait: `${MODULE_ID}.Settings.PortraitSourceActor`
+    },
+    default: 'token',
+    onChange: () => ui.BG3HUD_APP?.refresh()
+  });
+
   // Show HP controls (kill/heal buttons) setting
   game.settings.register(MODULE_ID, 'showHPControls', {
     name: `${MODULE_ID}.Settings.ShowHPControls`,
@@ -368,7 +383,7 @@ export function registerSettings() {
     moduleId: MODULE_ID,
     titleKey: `${MODULE_ID}.Settings.Display.MenuTitle`,
     sections: [
-      { legend: `${MODULE_ID}.Settings.Display.Legend`, keys: ['showItemNames', 'showItemUses', 'showHealthOverlay', 'showHPControls', 'hideDeathSaves'] }
+      { legend: `${MODULE_ID}.Settings.Display.Legend`, keys: ['showItemNames', 'showItemUses', 'showHealthOverlay', 'defaultPortraitImageSource', 'showHPControls', 'hideDeathSaves'] }
     ]
   });
 
