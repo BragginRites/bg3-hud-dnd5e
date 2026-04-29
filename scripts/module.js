@@ -219,8 +219,9 @@ class DnD5eAdapter {
      */
     isCompatible(actor) {
         if (!actor) return false;
-        // Ignore Group Actors (vehicles/party tracking)
-        if (actor.type === 'group') return false;
+        // D&D 5e actor types include: character, npc, vehicle, group, encounter
+        // Group actors are party/collection records and can be excluded via GM setting.
+        if (actor.type === 'group' && game.settings.get(MODULE_ID, 'ignoreGroupActors')) return false;
         return true;
     }
 

@@ -28,6 +28,8 @@
       "ShowHPControlsHint": "Display the kill (skull) and heal (heart) buttons on the portrait HP controls",
       "HideDeathSaves": "Hide Death Saves UI",
       "HideDeathSavesHint": "Completely hide the death saves UI rows when at 0 HP",
+      "IgnoreGroupActors": "Ignore Group Actors",
+      "IgnoreGroupActorsHint": "When enabled, actors of type 'group' are excluded from BG3 HUD compatibility checks",
       "EnableCPRGenericActions": "Enable CPR Generic Actions Button",
       "EnableCPRGenericActionsHint": "Show a vertical button next to the advantage container that triggers CPR's Generic Actions (2024) dialog",
       "EnableCPRActionsAutoPopulate": "Enable CPR Actions Auto-Populate",

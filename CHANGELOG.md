@@ -2,6 +2,9 @@
 
 ### Changed
 - Keeps pace with core 0.3.0: passive choices, portrait (token vs art), and your advantage/disadvantage HUD buttons still update correctly when those change — same flow, internals lined up with the shared HUD codebase.
+- **Rest Button Sizing**: Rest action button now sizes to its content instead of using fixed width/height dimensions.
+- **Death Saves Visibility Scope**: "Hide Death Saves UI" now uses a world-level setting so the GM controls this behaviour for all users.
+- **Group Actor Compatibility Setting**: Added a new world setting to ignore D&D 5e `group` actor types during HUD compatibility checks (enabled by default).
 
 ## [Branch Update: feature/minor-polish] - 2026-04-28
 

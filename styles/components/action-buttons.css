@@ -1,0 +1,13 @@
+/* D&D 5e action button overrides */
+
+#bg3-hotbar-container .bg3-action-buttons-container .bg3-button.rest-button {
+    width: fit-content;
+    min-width: max-content;
+    height: auto;
+    min-height: calc(var(--bg3-hotbar-cell-size, 60px) * 0.66);
+    padding: 6px 10px;
+}
+
+#bg3-hotbar-container .bg3-action-buttons-container .bg3-button.rest-button .bg3-button-icon {
+    font-size: calc(var(--bg3-hotbar-cell-size, 60px) / 2.4);
+}

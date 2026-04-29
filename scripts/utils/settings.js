@@ -249,11 +249,21 @@ export function registerSettings() {
   game.settings.register(MODULE_ID, 'hideDeathSaves', {
     name: `${MODULE_ID}.Settings.HideDeathSaves`,
     hint: `${MODULE_ID}.Settings.HideDeathSavesHint`,
-    scope: 'client',
+    scope: 'world',
     config: false,
     type: Boolean,
     default: false,
     onChange: () => ui.BG3HUD_APP?.refresh()
+  });
+
+  // Ignore D&D 5e Group actors when selecting compatible tokens
+  game.settings.register(MODULE_ID, 'ignoreGroupActors', {
+    name: `${MODULE_ID}.Settings.IgnoreGroupActors`,
+    hint: `${MODULE_ID}.Settings.IgnoreGroupActorsHint`,
+    scope: 'world',
+    config: false,
+    type: Boolean,
+    default: true
   });
 
   // CPR Generic Actions button setting (vertical button next to adv container)
@@ -391,7 +401,7 @@ export function registerSettings() {
     moduleId: MODULE_ID,
     titleKey: `${MODULE_ID}.Settings.AutoPopulate.MenuTitle`,
     sections: [
-      { legend: `${MODULE_ID}.Settings.AutoPopulate.Legend`, keys: ['autoPopulateEnabled', 'autoPopulatePlayerCharacters', 'autoPopulatePassivesEnabled', 'filterPreparedSpellsPlayers', 'filterPreparedSpellsNPCs'] }
+      { legend: `${MODULE_ID}.Settings.AutoPopulate.Legend`, keys: ['autoPopulateEnabled', 'autoPopulatePlayerCharacters', 'autoPopulatePassivesEnabled', 'filterPreparedSpellsPlayers', 'filterPreparedSpellsNPCs', 'ignoreGroupActors'] }
     ]
   });
 
