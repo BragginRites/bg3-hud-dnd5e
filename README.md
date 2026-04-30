@@ -13,7 +13,7 @@ A D&D 5e integration module for the BG3 Inspired HUD system. This module adapts 
 > **This module requires the [bg3-hud-core](https://github.com/BragginRites/bg3-hud-core) module to function.**
 
 ## Support Development
-If it's your kind of thing please consider my [Ko-fi](https://ko-fi.com/bragginrites). It helps keep be up to 2am coding these modules. Thank you!
+If it's your kind of thing please consider my [Ko-fi](https://ko-fi.com/bragginrites). It helps to keep me up to 2am coding these modules. Thank you!
 
 ---
 
