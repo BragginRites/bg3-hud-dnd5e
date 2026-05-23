@@ -4,8 +4,7 @@ const MODULE_ID = 'bg3-hud-dnd5e';
 
 /**
  * D&D 5e Advantage/Disadvantage Container
- * Provides ADV/DIS buttons for midi-qol integration
- * Only visible when midi-qol is active and setting is enabled
+ * ADV/DIS buttons are always shown as roll reminders; midi-qol integration is optional.
  */
 export class DnD5eAdvContainer extends BG3Component {
     constructor(options = {}) {
@@ -15,12 +14,20 @@ export class DnD5eAdvContainer extends BG3Component {
     }
 
     /**
+     * Whether ADV/DIS state should apply to midi-qol rolls
+     * @returns {boolean}
+     */
+    _midiIntegrationActive() {
+        return game.modules.get('midi-qol')?.active
+            && game.settings.get(MODULE_ID, 'addAdvBtnsMidiQoL');
+    }
+
+    /**
      * Check if container should be visible
      * @returns {boolean}
      */
     get visible() {
-        return game.settings.get(MODULE_ID, 'addAdvBtnsMidiQoL') && 
-                          game.modules.get("midi-qol")?.active;
+        return !!this.actor;
     }
 
     /**
@@ -28,7 +35,9 @@ export class DnD5eAdvContainer extends BG3Component {
      * @returns {Array}
      */
     get btnData() {
-        return [
+        if (!this.actor) return [];
+
+        const buttons = [
             {
                 type: 'div',
                 key: 'advBtn',
@@ -37,17 +46,38 @@ export class DnD5eAdvContainer extends BG3Component {
                 events: {
                     'mouseup': this.setState.bind(this),
                 }
-            },
-            {
-                type: 'div',
-                key: 'disBtn',
-                tooltip: () => game.i18n.localize(`${MODULE_ID}.Advantage.DisTooltip`),
-                label: () => game.i18n.localize(`${MODULE_ID}.Advantage.DIS`),
-                events: {
-                    'mouseup': this.setState.bind(this),
-                }
             }
         ];
+
+        // Insert Heroic Inspiration button in the middle for character type actors
+        if (this.actor.type === 'character') {
+            const hasInspiration = !!this.actor.system.attributes.inspiration;
+            buttons.push({
+                type: 'div',
+                key: 'inspirationBtn',
+                classes: [hasInspiration ? 'active' : 'inactive'],
+                tooltip: () => {
+                    const active = !!this.actor.system.attributes.inspiration;
+                    return `Heroic Inspiration: ${active ? 'Active' : 'Inactive'}<br>Left Click to Toggle`;
+                },
+                icon: 'fas fa-star',
+                events: {
+                    'click': this.toggleInspiration.bind(this)
+                }
+            });
+        }
+
+        buttons.push({
+            type: 'div',
+            key: 'disBtn',
+            tooltip: () => game.i18n.localize(`${MODULE_ID}.Advantage.DisTooltip`),
+            label: () => game.i18n.localize(`${MODULE_ID}.Advantage.DIS`),
+            events: {
+                'mouseup': this.setState.bind(this),
+            }
+        });
+
+        return buttons;
     }
 
     /**
@@ -67,14 +97,13 @@ export class DnD5eAdvContainer extends BG3Component {
             this.element.removeChild(this.element.firstChild);
         }
 
-        // Hide container if not visible (midi-qol not active or setting disabled)
-        if (!this.visible || !this.actor) {
+        if (!this.visible) {
             this.element.style.display = 'none';
             return this.element;
         }
 
-        // Show container
         this.element.style.display = 'flex';
+        this.element.dataset.midiIntegration = String(this._midiIntegrationActive());
 
         // Create buttons
         const buttons = this.btnData.map((btn) => this._createButton(btn));
@@ -101,6 +130,11 @@ export class DnD5eAdvContainer extends BG3Component {
         // Mark as UI element to prevent system tooltips (dnd5e2, etc.) from showing
         button.dataset.bg3Ui = 'true';
         
+        // Add classes
+        if (btnData.classes) {
+            button.classList.add(...btnData.classes);
+        }
+        
         // Add tooltip
         if (btnData.tooltip) {
             const tooltipText = typeof btnData.tooltip === 'function' ? btnData.tooltip() : btnData.tooltip;
@@ -111,8 +145,12 @@ export class DnD5eAdvContainer extends BG3Component {
             }
         }
 
-        // Add label
-        if (btnData.label) {
+        // Add icon or label
+        if (btnData.icon) {
+            const icon = document.createElement('i');
+            icon.className = btnData.icon;
+            button.appendChild(icon);
+        } else if (btnData.label) {
             const label = document.createElement('span');
             const labelText = typeof btnData.label === 'function' ? btnData.label() : btnData.label;
             label.textContent = labelText;
@@ -163,6 +201,19 @@ export class DnD5eAdvContainer extends BG3Component {
     }
 
     /**
+     * Toggle inspiration on the actor
+     * @param {MouseEvent} event - Click event
+     */
+    async toggleInspiration(event) {
+        if (!this.actor) return;
+        event.preventDefault();
+        event.stopPropagation();
+        
+        const hasInspiration = !!this.actor.system.attributes.inspiration;
+        await this.actor.update({ 'system.attributes.inspiration': !hasInspiration });
+    }
+
+    /**
      * Update button visual states based on actor flags
      */
     updateButtons() {
@@ -181,6 +232,15 @@ export class DnD5eAdvContainer extends BG3Component {
             this.element.dataset.once = String(once);
         } else {
             this.element.removeAttribute('data-once');
+        }
+
+        // Update inspiration button visual classes and tooltip
+        const inspBtn = this.element.querySelector('[data-key="inspirationBtn"]');
+        if (inspBtn) {
+            const hasInspiration = !!this.actor.system.attributes.inspiration;
+            inspBtn.classList.toggle('active', hasInspiration);
+            inspBtn.classList.toggle('inactive', !hasInspiration);
+            inspBtn.dataset.tooltip = `Heroic Inspiration: ${hasInspiration ? 'Active' : 'Inactive'}<br>Left Click to Toggle`;
         }
     }
 

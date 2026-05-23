@@ -3,7 +3,9 @@
     "Rest": "Rest",
     "RestTooltip": "Rest<br><span style='font-size: 0.85em; opacity: 0.8;'>Click: Choose rest type<br>Ctrl+Click: Short Rest<br>Alt+Click: Long Rest</span>",
     "ChooseRestType": "Choose a rest type:",
-    "EndTurn": "End Turn"
+    "EndTurn": "End Turn",
+    "Inspiration": "Inspiration",
+    "InspirationTooltip": "Heroic Inspiration<br><span style='font-size: 0.85em; opacity: 0.8;'>Left Click to toggle Heroic Inspiration status.</span>"
   },
   "bg3-hud-dnd5e": {
     "Settings": {
@@ -36,10 +38,12 @@
       "EnableCPRActionsAutoPopulateHint": "Automatically populate quick access with CPR actions when tokens are created (uses 2014 or 2024 compendium based on D&D 5e Rules Version setting). If actions are manually selected, those take priority.",
       "SelectedCPRActions": "Selected CPR Actions",
       "SelectedCPRActionsHint": "Manually selected CPR actions to show in quick access (configure via 'Select CPR Actions' menu). List is populated with the compendium matching your D&D 5e Rules Version.",
-      "BlockCPRActionsOnHotbar": "Block CPR Actions on Hotbar",
-      "BlockCPRActionsOnHotbarHint": "Prevent CPR Generic Actions from being dragged onto the hotbar. Derived items like 'Grapple: Escape' are still allowed.",
-      "EnableAdvBtnsMidiQoL": "Enable Advantage/Disadvantage Buttons (Midi-QoL)",
-      "EnableAdvBtnsMidiQoLHint": "Add advantage/disadvantage buttons to the situational bonuses container when Midi-QoL is active",
+      "AllowCPRActionsInAutoPopulate": "Allow CPR Actions in Hotbar Auto-Populate",
+      "AllowCPRActionsInAutoPopulateHint": "When enabled, CPR generic actions (Dash, Dodge, Attack, etc.) may be included when auto-populating the main hotbar. Drag-and-drop is always allowed on any grid.",
+      "EnableAdvBtnsMidiQoL": "Apply ADV/DIS to Midi-QoL Rolls",
+      "EnableAdvBtnsMidiQoLHint": "When enabled with Midi-QoL active, ADV/DIS button state is applied to the next qualifying roll. The buttons are always visible as reminders regardless of this setting.",
+      "SyncBonusReactionFilters": "Sync Bonus & Reaction Filters",
+      "SyncBonusReactionFiltersHint": "When enabled with Midi-QoL active, mark Bonus Action and Reaction filters as used (same as right-click) when Midi-QoL applies the corresponding action economy effect. Requires Midi-QoL Workflow Settings > Reactions: both \"Enforce Reactions\" and \"Enforce Bonus Actions\" must be set to \"All actors: prompt if used\".",
       "AutoPopulateOnTokenCreation": "Auto-populate on Token Creation",
       "AutoPopulateOnTokenCreationHint": "Automatically populate hotbar grids with items when a token is created",
       "AutoPopulatePlayerCharacters": "Allow Auto-populate for Player Characters",
@@ -209,7 +213,6 @@
       "LongRestNotAvailable": "Long rest not available for this actor",
       "SlotOccupiedByTwoHandedWeapon": "This slot is occupied by a two-handed weapon",
       "FailedToRollInitiative": "Failed to roll initiative",
-      "CPRActionBlockedFromHotbar": "CPR Generic Actions cannot be added to the hotbar. Use the Quick Access grid instead.",
       "ActivityNotFound": "Activity not found",
       "ActivityCannotBeUsed": "Activity cannot be used"
     },

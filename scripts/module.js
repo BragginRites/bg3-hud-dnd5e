@@ -19,6 +19,10 @@ import { registerSettings } from './utils/settings.js';
 import { renderDnD5eTooltip } from './utils/tooltipRenderer.js';
 import { DnD5eMenuBuilder } from './components/menus/DnD5eMenuBuilder.js';
 import { DnD5eTargetingRules } from './utils/DnD5eTargetingRules.js';
+import {
+    isExcludedCPRAutoPopulateActionName,
+    shouldExcludeGenericActionFromHotbarAutoAdd
+} from './constants/cprBlockedHotbarActions.js';
 
 
 const MODULE_ID = 'bg3-hud-dnd5e';
@@ -137,6 +141,20 @@ Hooks.on('bg3HudReady', async (BG3HUD_API) => {
 
     // Initialize default CPR actions if not set
     await adapter.cprAutoPopulate.initializeDefaultActions();
+
+    // Update situational bonuses (advantage/disadvantage container) when inspiration changes
+    Hooks.on('updateActor', async (actor, changes, options, userId) => {
+        const hotbarApp = ui.BG3HUD_APP;
+        if (!hotbarApp || actor !== hotbarApp.currentActor) return;
+
+        const inspirationChanged = changes?.system?.attributes?.inspiration !== undefined;
+        if (inspirationChanged) {
+            const advContainer = hotbarApp.components?.situationalBonuses;
+            if (advContainer && typeof advContainer.updateButtons === 'function') {
+                advContainer.updateButtons();
+            }
+        }
+    });
 
     // Signal that adapter registration is complete
     Hooks.call('bg3HudRegistrationComplete');
@@ -554,10 +572,93 @@ class DnD5eAdapter {
     async onTokenCreationComplete(actor, persistenceManager) {
         if (!actor) return;
 
-        // Use adapter's cprAutoPopulate with the provided persistence manager
+        if (persistenceManager) {
+            persistenceManager.setToken(actor);
+        }
+
         if (this.cprAutoPopulate) {
             await this.cprAutoPopulate.onTokenCreation(actor, persistenceManager);
         }
+
+        // ItemUpdateManager may auto-add feats during createItem (async); strip any that slipped through
+        await this._stripExcludedGenericActionsFromHotbar(persistenceManager);
+        setTimeout(() => {
+            if (persistenceManager) {
+                persistenceManager.setToken(actor);
+            }
+            this._stripExcludedGenericActionsFromHotbar(persistenceManager).catch(err => {
+                console.warn('[bg3-hud-dnd5e] Deferred hotbar generic-action strip failed:', err);
+            });
+        }, 300);
+    }
+
+    /**
+     * Remove excluded generic actions from main hotbar state (not quick access).
+     * @param {PersistenceManager} persistenceManager
+     * @private
+     */
+    async _stripExcludedGenericActionsFromHotbar(persistenceManager) {
+        if (!persistenceManager || game.settings.get(MODULE_ID, 'allowCPRActionsInAutoPopulate')) return;
+
+        const state = await persistenceManager.loadState();
+        let changed = false;
+
+        for (const grid of state.hotbar?.grids || []) {
+            for (const [slotKey, cell] of Object.entries(grid.items || {})) {
+                if (!cell) continue;
+
+                if (isExcludedCPRAutoPopulateActionName(cell.name)) {
+                    delete grid.items[slotKey];
+                    changed = true;
+                    continue;
+                }
+
+                if (cell.uuid) {
+                    const doc = await fromUuid(cell.uuid);
+                    if (shouldExcludeGenericActionFromHotbarAutoAdd(doc)) {
+                        delete grid.items[slotKey];
+                        changed = true;
+                    }
+                }
+            }
+        }
+
+        if (!changed) return;
+
+        await persistenceManager.saveState(state);
+
+        const hotbarApp = ui.BG3HUD_APP;
+        if (hotbarApp?.rendered && hotbarApp?.components?.hotbar?.gridContainers) {
+            for (const gridContainer of hotbarApp.components.hotbar.gridContainers) {
+                const gridIndex = gridContainer.containerIndex;
+                const gridData = state.hotbar.grids[gridIndex];
+                if (gridData) {
+                    gridContainer.items = gridData.items;
+                    await gridContainer.render();
+                }
+            }
+        }
+    }
+
+    /**
+     * Whether ItemUpdateManager should auto-add this item to the hotbar on create/update.
+     * @param {Item} item
+     * @returns {boolean}
+     */
+    shouldAutoAddItem(item) {
+        if (!item) return false;
+
+        if (shouldExcludeGenericActionFromHotbarAutoAdd(item)) {
+            return false;
+        }
+
+        const activities = item.system?.activities;
+        const hasActivities = (activities instanceof Map && activities.size > 0)
+            || (activities && typeof activities === 'object' && !Array.isArray(activities) && Object.keys(activities).length > 0)
+            || (Array.isArray(activities) && activities.length > 0)
+            || (item.system?.activation?.type && item.system.activation.type !== 'none');
+
+        return hasActivities;
     }
 
     /**
@@ -765,85 +866,6 @@ class DnD5eAdapter {
         }
 
         return cellData;
-    }
-
-    /**
-     * Check if an item should be blocked from being added to the hotbar
-     * Used by InteractionCoordinator to filter external drops
-     * CPR items should only appear in quick access or via the Generic Actions button
-     * @param {Item} item - The item to check
-     * @returns {Promise<{blocked: boolean, reason?: string}>} Whether the item should be blocked and why
-     */
-    async shouldBlockFromHotbar(item) {
-        if (!item) return { blocked: false };
-
-        // Check if blocking CPR Generic Actions is enabled
-        const blockCPRActions = game.settings.get(MODULE_ID, 'blockCPRActionsOnHotbar');
-        if (!blockCPRActions) return { blocked: false };
-
-        // Check if CPR module is active
-        if (!game.modules.get('chris-premades')?.active) return { blocked: false };
-
-        const uuid = item.uuid || '';
-
-        // Block the "Generic Actions" items from CPRMiscellaneous compendium (both 2014 and 2024 versions)
-        // These are the main Generic Actions dialog items
-        const genericActionsUuids = [
-            'Compendium.chris-premades.CPRMiscellaneous.Item.V0rdpb8WPmdYhAjc',  // Generic Actions (2014)
-            'Compendium.chris-premades.CPRMiscellaneous.Item.Iz2XtxLReLnXTDiI'   // Generic Actions (2024)
-        ];
-        if (genericActionsUuids.includes(uuid)) {
-            return {
-                blocked: true,
-                reason: game.i18n.localize(`${MODULE_ID}.Notifications.CPRActionBlockedFromHotbar`)
-            };
-        }
-
-        // Check if the item is from either CPRActions compendium (2014 or 2024)
-        // Compendium items have UUIDs like: Compendium.chris-premades.CPRActions.Item.xxx
-        // or Compendium.chris-premades.CPRActions2024.Item.xxx
-        if (uuid.startsWith('Compendium.chris-premades.CPRActions.') ||
-            uuid.startsWith('Compendium.chris-premades.CPRActions2024.')) {
-            return {
-                blocked: true,
-                reason: game.i18n.localize(`${MODULE_ID}.Notifications.CPRActionBlockedFromHotbar`)
-            };
-        }
-
-        // Check for Generic Actions items by NAME (for embedded items on actors)
-        const genericActionsNames = [
-            'Generic Actions (2014)',
-            'Generic Actions (2024)'
-        ];
-        if (genericActionsNames.includes(item.name)) {
-            return {
-                blocked: true,
-                reason: game.i18n.localize(`${MODULE_ID}.Notifications.CPRActionBlockedFromHotbar`)
-            };
-        }
-
-        // Check if the item was created from CPRActions compendium (for embedded items)
-        // These have the source compendium stored in flags or _stats
-        const sourceCompendium = item._stats?.compendiumSource || item.flags?.core?.sourceId || '';
-
-        // Block embedded Generic Actions items (imported from CPRMiscellaneous)
-        if (sourceCompendium.includes('chris-premades.CPRMiscellaneous')) {
-            return {
-                blocked: true,
-                reason: game.i18n.localize(`${MODULE_ID}.Notifications.CPRActionBlockedFromHotbar`)
-            };
-        }
-
-        // Block items from CPRActions or CPRActions2024 compendiums
-        if (sourceCompendium.includes('chris-premades.CPRActions') ||
-            sourceCompendium.includes('chris-premades.CPRActions2024')) {
-            return {
-                blocked: true,
-                reason: game.i18n.localize(`${MODULE_ID}.Notifications.CPRActionBlockedFromHotbar`)
-            };
-        }
-
-        return { blocked: false };
     }
 
     /**

@@ -625,6 +625,30 @@ export async function createDnD5ePortraitContainer() {
         }
 
         /**
+         * Sync health overlay alpha mask to the current portrait media.
+         * @param {HTMLElement} portraitImageSubContainer
+         * @private
+         */
+        _syncPortraitAlphaMask(portraitImageSubContainer) {
+            if (!portraitImageSubContainer || !this.element) return;
+
+            const showHealthOverlay = game.settings.get('bg3-hud-dnd5e', 'showHealthOverlay') ?? true;
+            const media = portraitImageSubContainer.querySelector('.portrait-image, .portrait-video');
+            const isVideo = media?.tagName === 'VIDEO';
+
+            if (!showHealthOverlay || !media || isVideo) {
+                portraitImageSubContainer.removeAttribute('data-bend-mode');
+                portraitImageSubContainer.style.removeProperty('--bend-img');
+                this.element.classList.remove('use-bend-mask');
+                return;
+            }
+
+            portraitImageSubContainer.setAttribute('data-bend-mode', 'true');
+            portraitImageSubContainer.style.setProperty('--bend-img', `url("${media.src}")`);
+            this.element.classList.add('use-bend-mask');
+        }
+
+        /**
          * Update image preference (toggle between token and portrait)
          * @returns {Promise<void>}
          * @deprecated Use actor.setFlag directly from menu builder
@@ -642,6 +666,31 @@ export async function createDnD5ePortraitContainer() {
             await this.actor.setFlag('bg3-hud-dnd5e', 'useTokenImage', newPreference);
 
             // The UpdateCoordinator will handle the re-render via _handleAdapterFlags
+        }
+
+        /**
+         * Swap portrait context and refresh mask/child components for the new token.
+         * @param {Actor} actor
+         * @param {Token} token
+         * @returns {Promise<HTMLElement>}
+         */
+        async swapTokenContext(actor, token) {
+            await super.swapTokenContext(actor, token);
+
+            const portraitImageSubContainer = this.element?.querySelector('.portrait-image-subcontainer');
+            if (portraitImageSubContainer) {
+                this._syncPortraitAlphaMask(portraitImageSubContainer);
+            }
+
+            if (this.components.deathSaves) {
+                this.components.deathSaves.actor = actor;
+                this.components.deathSaves.token = token;
+                if (typeof this.components.deathSaves.update === 'function') {
+                    await this.components.deathSaves.update();
+                }
+            }
+
+            return this.element;
         }
 
         /**
@@ -686,7 +735,6 @@ export async function createDnD5ePortraitContainer() {
 
             // Health overlay (red damage indicator) - check setting
             const showHealthOverlay = game.settings.get('bg3-hud-dnd5e', 'showHealthOverlay') ?? true;
-            const isVideoPortrait = mediaElement.tagName.toLowerCase() === 'video';
             let healthOverlay = null;
 
             if (showHealthOverlay) {
@@ -695,13 +743,6 @@ export async function createDnD5ePortraitContainer() {
                 damageOverlay.style.height = `${health.damage}%`;
                 damageOverlay.style.opacity = '1';
                 healthOverlay.appendChild(damageOverlay);
-
-                // Apply alpha mask for images (not compatible with video)
-                if (!isVideoPortrait) {
-                    portraitImageSubContainer.setAttribute('data-bend-mode', 'true');
-                    portraitImageSubContainer.style.setProperty('--bend-img', `url("${mediaElement.src}")`);
-                    this.element.classList.add('use-bend-mask');
-                }
             }
 
             // Assemble portrait image structure
@@ -709,6 +750,7 @@ export async function createDnD5ePortraitContainer() {
             if (showHealthOverlay && healthOverlay) {
                 portraitImageSubContainer.appendChild(healthOverlay);
             }
+            this._syncPortraitAlphaMask(portraitImageSubContainer);
             portraitImageContainer.appendChild(portraitImageSubContainer);
 
             // Add portrait data badges (from core PortraitContainer)
@@ -738,6 +780,8 @@ export async function createDnD5ePortraitContainer() {
             });
             const deathSavesElement = await this.components.deathSaves.render();
             this.element.appendChild(deathSavesElement);
+
+            this._applyPortraitVisibility();
 
             return this.element;
         }
@@ -776,15 +820,13 @@ export async function createDnD5ePortraitContainer() {
                         healthOverlay.appendChild(newDamageOverlay);
 
                         portraitImageSubContainer.appendChild(healthOverlay);
-
-                        // Apply alpha mask if not already applied
-                        if (!portraitImageSubContainer.hasAttribute('data-bend-mode')) {
-                            portraitImageSubContainer.setAttribute('data-bend-mode', 'true');
-                            portraitImageSubContainer.style.setProperty('--bend-img', `url("${img.src}")`);
-                            this.element.classList.add('use-bend-mask');
-                        }
                     }
                 }
+            }
+
+            const portraitImageSubContainer = this.element.querySelector('.portrait-image-subcontainer');
+            if (portraitImageSubContainer) {
+                this._syncPortraitAlphaMask(portraitImageSubContainer);
             }
 
             // Update health text component (it has its own optimized update method)

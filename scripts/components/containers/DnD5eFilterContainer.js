@@ -3,6 +3,11 @@ import { normalizeApothecarySlots } from '../../compatibility/scgd-apothecary.js
 
 const MODULE_ID = 'bg3-hud-dnd5e';
 
+/** Midi-QoL action economy status effect IDs (see midi-qol getStaticID) */
+const BONUS_ACTION_EFFECT_ID = 'dnd5ebonusaction';
+const REACTION_EFFECT_ID = 'dnd5ereaction000';
+const ACTION_ECONOMY_EFFECT_IDS = [BONUS_ACTION_EFFECT_ID, REACTION_EFFECT_ID];
+
 /**
  * D&D 5e Filter Container
  * Provides action type and spell slot filters for D&D 5e
@@ -250,6 +255,63 @@ export class DnD5eFilterContainer extends FilterContainer {
         }
 
         return false;
+    }
+
+    /**
+     * Sync bonus/reaction filter "used" state from Midi-QoL action economy effects
+     * @param {ActiveEffect} [effect] - Optional effect that triggered the sync
+     */
+    syncUsedActionFilters(effect) {
+        if (!game.modules.get('midi-qol')?.active) return;
+        if (!game.settings.get(MODULE_ID, 'syncBonusReactionFilters')) return;
+        if (!this.actor) return;
+
+        if (effect && !ACTION_ECONOMY_EFFECT_IDS.includes(effect.id)) return;
+
+        const activeEffects = this.actor.effects?.contents ?? [];
+        const bonusFilter = this.getAllFilterButtons().find(f => f.data.id === 'bonus');
+        const reactionFilter = this.getAllFilterButtons().find(f => f.data.id === 'reaction');
+
+        this._syncFilterUsedState(
+            bonusFilter,
+            activeEffects.some(e => e.id === BONUS_ACTION_EFFECT_ID)
+        );
+        this._syncFilterUsedState(
+            reactionFilter,
+            activeEffects.some(e => e.id === REACTION_EFFECT_ID)
+        );
+    }
+
+    /**
+     * Align a filter's used state with the desired value
+     * @param {import('/modules/bg3-hud-core/scripts/components/buttons/FilterButton.js').FilterButton|null} filterButton
+     * @param {boolean} isUsed
+     * @private
+     */
+    _syncFilterUsedState(filterButton, isUsed) {
+        if (!filterButton) return;
+
+        const currentlyUsed = this._used.includes(filterButton);
+        if (isUsed !== currentlyUsed) {
+            this.used = filterButton;
+        }
+    }
+
+    /**
+     * @override
+     */
+    async render() {
+        const element = await super.render();
+        this.syncUsedActionFilters();
+        return element;
+    }
+
+    /**
+     * @override
+     */
+    async update() {
+        await super.update();
+        this.syncUsedActionFilters();
     }
 }
 

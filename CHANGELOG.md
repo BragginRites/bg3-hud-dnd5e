@@ -1,3 +1,22 @@
+## [0.4.0] - 2026-05-23
+
+Requires **bg3-hud-core 0.4.0**.
+
+### Added
+- **Heroic Inspiration button**: Player characters get a Heroic Inspiration toggle in the advantage/disadvantage column, sitting between ADV and DIS.
+- **Bonus & reaction filter sync**: When using Midi-QoL, spending a bonus action or reaction can automatically grey out the matching filter button (same as if you right-clicked it). On by default — see Third-Party → Midi-QoL settings. You will need Midi-QoL's **Enforce Reactions** and **Enforce Bonus Actions** set to **All actors: prompt if used** under Workflow Settings → Reactions.
+- **Smarter auto-populate defaults**: New worlds start with NPC auto-populate turned on — weapons and features on the first grid, spells on the second, potions and scrolls on the third.
+
+### Changed
+- **Advantage/disadvantage always visible**: ADV and DIS buttons are always shown as on-table reminders. The Midi-QoL setting now only controls whether they affect rolls (off by default), not whether you see them, so Heroic Inspiration stays put even without Midi-QoL integration.
+- **Rest and End Turn buttons**: Icons only. Hover for the tooltip, no text label on the buttons.
+- **CPR actions on the hotbar**: CPR generic actions (Dash, Dodge, etc.) are no longer blocked from being dragged onto the hotbar. A separate setting lets you include them in auto-populate if you want; by default they stay in quick access and the CPR actions button instead.
+- **NPC advantage button sizing**: On NPCs without Heroic Inspiration, the ADV and DIS buttons now match the height of the CPR actions column beside them.
+
+### Fixed
+- **Portrait damage overlay on token swap**: Switching tokens no longer leaves the red damage overlay shaped like the previous token's portrait.
+- **CPR actions filling the main hotbar**: Generic CPR actions should no longer sneak into the main hotbar grids during auto-populate unless you have opted in.
+
 ## [0.3.0] - 2026-04-28
 
 ### Changed

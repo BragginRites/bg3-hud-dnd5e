@@ -118,7 +118,8 @@ export class DnD5eCPRAutoPopulate {
             let tempPersistence = providedPersistence;
             if (!tempPersistence) {
                 const { PersistenceManager } = await import('/modules/bg3-hud-core/scripts/managers/PersistenceManager.js');
-                tempPersistence = new PersistenceManager();
+                tempPersistence = PersistenceManager.forActor(actor);
+            } else {
                 tempPersistence.setToken(actor);
             }
 

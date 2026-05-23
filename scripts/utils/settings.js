@@ -2,6 +2,29 @@ import { createSettingsSubmenu } from '/modules/bg3-hud-core/scripts/api/Setting
 
 const MODULE_ID = 'bg3-hud-dnd5e';
 
+/** Default grid assignment for NPC token auto-populate */
+export const DEFAULT_AUTO_POPULATE_CONFIGURATION = {
+  grid0: ['weapon', 'feat'],
+  grid1: ['spell'],
+  grid2: ['consumable:potion', 'consumable:scroll'],
+  options: {}
+};
+
+/**
+ * Decouple legacy drag-block setting from auto-populate allow (v1 migration conflated them).
+ */
+function migrateLegacyBlockCPRActionsSetting() {
+  if (game.settings.get(MODULE_ID, '_cprAutoPopulateV2Decoupled')) return;
+
+  // V1 incorrectly set allowCPRActionsInAutoPopulate = !blockCPRActionsOnHotbar — reset to default
+  if (game.settings.get(MODULE_ID, '_cprAutoPopulateSettingMigrated')) {
+    game.settings.set(MODULE_ID, 'allowCPRActionsInAutoPopulate', false);
+  }
+
+  game.settings.set(MODULE_ID, '_cprAutoPopulateSettingMigrated', true);
+  game.settings.set(MODULE_ID, '_cprAutoPopulateV2Decoupled', true);
+}
+
 /**
  * Get CPR configuration based on D&D 5e rules version
  * @returns {{packName: string, packId: string, isModern: boolean, settingsKey: string}}
@@ -310,17 +333,30 @@ export function registerSettings() {
     default: []
   });
 
-  // Block CPR Generic Actions from being added to the hotbar
-  // Items from chris-premades.CPRActions compendium will be blocked
-  // Derived items (e.g., "Grapple: Escape" created after using "Grapple") are still allowed
-  game.settings.register(MODULE_ID, 'blockCPRActionsOnHotbar', {
-    name: `${MODULE_ID}.Settings.BlockCPRActionsOnHotbar`,
-    hint: `${MODULE_ID}.Settings.BlockCPRActionsOnHotbarHint`,
+  game.settings.register(MODULE_ID, 'allowCPRActionsInAutoPopulate', {
+    name: `${MODULE_ID}.Settings.AllowCPRActionsInAutoPopulate`,
+    hint: `${MODULE_ID}.Settings.AllowCPRActionsInAutoPopulateHint`,
     scope: 'world',
     config: false,
     type: Boolean,
-    default: true
+    default: false
   });
+
+  game.settings.register(MODULE_ID, '_cprAutoPopulateSettingMigrated', {
+    scope: 'world',
+    config: false,
+    type: Boolean,
+    default: false
+  });
+
+  game.settings.register(MODULE_ID, '_cprAutoPopulateV2Decoupled', {
+    scope: 'world',
+    config: false,
+    type: Boolean,
+    default: false
+  });
+
+  migrateLegacyBlockCPRActionsSetting();
 
   // Midi-QoL advantage/disadvantage buttons setting
   game.settings.register(MODULE_ID, 'addAdvBtnsMidiQoL', {
@@ -329,7 +365,19 @@ export function registerSettings() {
     scope: 'world',
     config: false,
     type: Boolean,
-    default: true
+    default: false,
+    onChange: () => ui.BG3HUD_APP?.components?.situationalBonuses?.render?.()
+  });
+
+  // Midi-QoL bonus/reaction filter sync
+  game.settings.register(MODULE_ID, 'syncBonusReactionFilters', {
+    name: `${MODULE_ID}.Settings.SyncBonusReactionFilters`,
+    hint: `${MODULE_ID}.Settings.SyncBonusReactionFiltersHint`,
+    scope: 'world',
+    config: false,
+    type: Boolean,
+    default: true,
+    onChange: () => ui.BG3HUD_APP?.components?.filters?.syncUsedActionFilters?.()
   });
 
   // Auto-populate on token creation setting
@@ -339,7 +387,7 @@ export function registerSettings() {
     scope: 'world',
     config: false,
     type: Boolean,
-    default: false
+    default: true
   });
 
   // Auto-populate player characters override setting
@@ -380,12 +428,7 @@ export function registerSettings() {
     scope: 'world',
     config: false,
     type: Object,
-    default: {
-      grid0: [],
-      grid1: [],
-      grid2: [],
-      options: {}
-    }
+    default: foundry.utils.deepClone(DEFAULT_AUTO_POPULATE_CONFIGURATION)
   });
 
   // Now create submenu classes that reference the registered settings
@@ -446,7 +489,7 @@ export function registerSettings() {
     if (hasCPR) {
       thirdPartySections.push({
         legend: `${MODULE_ID}.Settings.ThirdParty.CPR.Legend`,
-        keys: ['enableCPRGenericActions', 'enableCPRActionsAutoPopulate', 'blockCPRActionsOnHotbar'],
+        keys: ['enableCPRGenericActions', 'enableCPRActionsAutoPopulate', 'allowCPRActionsInAutoPopulate'],
         buttons: [
           {
             id: 'cprActionsSelect',
@@ -463,7 +506,7 @@ export function registerSettings() {
     if (hasMidiQoL) {
       thirdPartySections.push({
         legend: `${MODULE_ID}.Settings.ThirdParty.Midi.Legend`,
-        keys: ['addAdvBtnsMidiQoL']
+        keys: ['addAdvBtnsMidiQoL', 'syncBonusReactionFilters']
       });
     }
 

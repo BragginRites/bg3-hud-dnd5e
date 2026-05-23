@@ -36,8 +36,8 @@
       "EnableCPRActionsAutoPopulateHint": "Preenche automaticamente o acesso rápido com ações do CPR quando os tokens são criados (usa o compêndio de 2014 ou 2024 com base na configuração da Versão das Regras de D&D 5e). Se as ações forem selecionadas manualmente, elas terão prioridade",
       "SelectedCPRActions": "Ações do CPR Selecionadas",
       "SelectedCPRActionsHint": "Ações do CPR escolhidas manualmente para acesso rápido (configure através do menu 'Selecionar Ações do CPR'). A lista é preenchida com o compêndio correspondente à sua Versão das Regras de D&D 5e",
-      "BlockCPRActionsOnHotbar": "Bloquear Ações do CPR na Hotbar",
-      "BlockCPRActionsOnHotbarHint": "Impede que as ações Genéricas do CPR sejam arrastadas para a hotbar. Itens derivados, como 'Agarrar: Escapar', ainda são permitidos",
+      "AllowCPRActionsInAutoPopulate": "Permitir Ações do CPR no Auto-Preenchimento da Hotbar",
+      "AllowCPRActionsInAutoPopulateHint": "Quando ativado, ações genéricas do CPR (Correr, Esquivar, Atacar, etc.) podem ser incluídas ao auto-preencher a hotbar principal. Arrastar e soltar é sempre permitido em qualquer grade",
       "EnableAdvBtnsMidiQoL": "Ativar Botões de Vantagem/Desvantagem (Midi-QoL)",
       "EnableAdvBtnsMidiQoLHint": "Adicione botões de vantagem/desvantagem ao contêiner de bônus situacionais quando o Midi-QoL estiver ativo",
       "AutoPopulateOnTokenCreation": "Auto-Preencher ao Criar Token",
@@ -209,7 +209,6 @@
       "LongRestNotAvailable": "Descanso longo não disponível para este ator",
       "SlotOccupiedByTwoHandedWeapon": "Este espaço está ocupado por uma arma de duas mãos",
       "FailedToRollInitiative": "Falha ao rolar iniciativa",
-      "CPRActionBlockedFromHotbar": "As Ações Genéricas do CPR não podem ser adicionadas à hotbar. Use a grade de Acesso Rápido",
       "ActivityNotFound": "Atividade não encontrada",
       "ActivityCannotBeUsed": "Atividade não pode ser usada"
     },

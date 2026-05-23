@@ -17,7 +17,7 @@
     color: var(--bg3-text-color);
     font-size: 0.8em;
     height: 163px;
-    /* Match combined height of ADV + gap + DIS (79px + 5px + 79px) */
+    /* Match ADV column height (PC: 59+5+35+5+59, NPC: 79+5+79) */
     transition: all 0.2s ease;
     padding: 5px;
     writing-mode: vertical-rl;
