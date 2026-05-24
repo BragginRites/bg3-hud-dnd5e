@@ -75,7 +75,7 @@ export class DnD5eFilterContainer extends FilterContainer {
             label: game.i18n.localize(`${MODULE_ID}.Filters.Action`),
             symbol: 'fa-circle',
             classes: ['action-type-button'],
-            color: getComputedStyle(document.documentElement).getPropertyValue('--dnd5e-filter-action')?.trim() || '#ff6b6b',
+            color: getComputedStyle(document.documentElement).getPropertyValue('--dnd5e-filter-action')?.trim() || '#2ecc71',
             data: { actionType: 'action' }
         });
 
@@ -84,7 +84,7 @@ export class DnD5eFilterContainer extends FilterContainer {
             label: game.i18n.localize(`${MODULE_ID}.Filters.BonusAction`),
             symbol: 'fa-triangle',
             classes: ['action-type-button'],
-            color: getComputedStyle(document.documentElement).getPropertyValue('--dnd5e-filter-bonus')?.trim() || '#4ecdc4',
+            color: getComputedStyle(document.documentElement).getPropertyValue('--dnd5e-filter-bonus')?.trim() || '#e37d22',
             data: { actionType: 'bonus' }
         });
 
@@ -93,7 +93,7 @@ export class DnD5eFilterContainer extends FilterContainer {
             label: game.i18n.localize(`${MODULE_ID}.Filters.Reaction`),
             symbol: 'fa-sparkle',
             classes: ['action-type-button'],
-            color: getComputedStyle(document.documentElement).getPropertyValue('--dnd5e-filter-reaction')?.trim() || '#95e1d3',
+            color: getComputedStyle(document.documentElement).getPropertyValue('--dnd5e-filter-reaction')?.trim() || '#fe85f6',
             data: { actionType: 'reaction' }
         });
 
@@ -114,7 +114,7 @@ export class DnD5eFilterContainer extends FilterContainer {
             label: game.i18n.localize(`${MODULE_ID}.Filters.Feature`),
             symbol: 'fa-star',
             classes: ['action-type-button'],
-            color: getComputedStyle(document.documentElement).getPropertyValue('--dnd5e-filter-feature')?.trim() || '#f38181',
+            color: getComputedStyle(document.documentElement).getPropertyValue('--dnd5e-filter-feature')?.trim() || '#d15300',
             data: { itemType: 'feat' }
         });
 
@@ -126,14 +126,14 @@ export class DnD5eFilterContainer extends FilterContainer {
                 label: game.i18n.localize(`${MODULE_ID}.Filters.Cantrip`),
                 centerLabel: 'C',
                 classes: ['spell-level-button', 'spell-cantrip-box'],
-                color: getComputedStyle(document.documentElement).getPropertyValue('--dnd5e-filter-cantrip')?.trim() || '#9b59b6',
+                color: getComputedStyle(document.documentElement).getPropertyValue('--dnd5e-filter-cantrip')?.trim() || '#3497d9',
                 data: { level: 0, value: 1, max: 1 }
             });
         }
 
         // Build spell slot children for the group
         const spellSlotChildren = [];
-        const spellColor = getComputedStyle(document.documentElement).getPropertyValue('--dnd5e-filter-spell')?.trim() || '#8e44ad';
+        const spellColor = getComputedStyle(document.documentElement).getPropertyValue('--dnd5e-filter-spell')?.trim() || '#3497d9';
 
         // Spell levels 1-9
         for (let level = 1; level <= 9; level++) {
@@ -157,7 +157,7 @@ export class DnD5eFilterContainer extends FilterContainer {
         // Pact Magic
         const pactMagic = this.actor.system.spells?.pact;
         if (pactMagic?.max > 0) {
-            const pactColor = getComputedStyle(document.documentElement).getPropertyValue('--dnd5e-filter-pact')?.trim() || '#9c27b0';
+            const pactColor = getComputedStyle(document.documentElement).getPropertyValue('--dnd5e-filter-pact')?.trim() || '#7d3d97';
             spellSlotChildren.push({
                 id: 'spell-pact',
                 label: game.i18n.localize(`${MODULE_ID}.Filters.PactMagic`),
