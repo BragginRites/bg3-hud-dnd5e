@@ -1,3 +1,10 @@
+## [0.4.1] - 2026-07-13
+
+Requires **bg3-hud-core 0.4.3**.
+
+### Changed
+- **Foundry v14 ready**: Verified and working on Foundry v14, and still fully supported on v13.
+
 ## [0.4.0] - 2026-05-23
 
 Requires **bg3-hud-core 0.4.0**.
