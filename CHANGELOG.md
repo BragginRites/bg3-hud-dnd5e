@@ -1,3 +1,28 @@
+## [0.6.0] - 2026-07-24
+
+Requires **bg3-hud-core 0.6.0**.
+
+Mostly a housekeeping release, plus a few changes you might notice.
+
+### Fixed
+- **Players can open the Display menu**: The Display settings menu was locked to GMs, so players couldn't set their own preferences (item names, item uses, health overlay, portrait source, HP controls). It's now available to everyone, and each player's choices apply only to their own view.
+- **Invalid-target messages**: When the target selector rejected a target (no actor, not visible, must be an enemy/ally, etc.), it showed a raw text code instead of the proper message. These now read correctly.
+
+### Changed
+- **Hide Death Saves now builds real suspense**: With this GM setting on, players see only the skull (roll button) and their death save rolls go privately to the GM, while the GM keeps seeing the success/failure pips. Previously it hid the pips from the GM too. The setting is GM-only and no longer shows in a player's Display menu.
+- **Quieter console**: Routine console messages are now hidden unless you turn on the new Debug Logging setting in the Core module. Warnings and errors still show.
+- **Under-the-hood cleanup**: Removed unused code (including a leftover CPR actions button and an old compatibility helper) and tidied duplicated logic. No change to how the HUD works.
+
+### Changed
+- **Short Rest / Long Rest buttons**: Rest is split into two buttons again (campfire / tent), matching the legacy hotbar. The choose-rest dialog is kept but no longer opened from these buttons.
+
+### Fixed
+- **Starry Form / multi-activity self use**: Target selector no longer pre-runs for multi-activity items that include self-consume activities, which was blocking resource consumption.
+- **Innate / own-uses spells grayed out**: Spells with their own limited uses are no longer treated as depleted just because the actor has no spell slots.
+- **Activity targeting**: Non-self activities on the hotbar now use the target selector when appropriate.
+- **pt-BR**: Inspiration strings and Midi-QoL setting copy updates (thanks Kharmans).
+
+
 ## [0.4.1] - 2026-07-13
 
 Requires **bg3-hud-core 0.4.3**.

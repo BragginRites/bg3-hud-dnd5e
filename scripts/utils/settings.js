@@ -1,4 +1,5 @@
 import { createSettingsSubmenu } from '/modules/bg3-hud-core/scripts/api/SettingsSubmenu.js';
+import { getCPRConfig } from '../constants/cprBlockedHotbarActions.js';
 
 const MODULE_ID = 'bg3-hud-dnd5e';
 
@@ -23,37 +24,6 @@ function migrateLegacyBlockCPRActionsSetting() {
 
   game.settings.set(MODULE_ID, '_cprAutoPopulateSettingMigrated', true);
   game.settings.set(MODULE_ID, '_cprAutoPopulateV2Decoupled', true);
-}
-
-/**
- * Get CPR configuration based on D&D 5e rules version
- * @returns {{packName: string, packId: string, isModern: boolean, settingsKey: string}}
- */
-function getCPRConfig() {
-  // Check D&D 5e rules version setting
-  // "modern" = 2024 rules, "legacy" = 2014 rules
-  const rulesVersion = game.settings.get('dnd5e', 'rulesVersion');
-  const isModern = rulesVersion === 'modern';
-
-  if (isModern) {
-    return {
-      packName: 'CPRActions2024',
-      packId: 'chris-premades.CPRActions2024',
-      // 2024 default actions: Dash, Disengage, Dodge, Help, Hide, Ready
-      defaultActions: ['Dash', 'Disengage', 'Dodge', 'Help', 'Hide', 'Ready'],
-      isModern: true,
-      settingsKey: 'selectedCPRActionsModern'
-    };
-  } else {
-    return {
-      packName: 'CPRActions',
-      packId: 'chris-premades.CPRActions',
-      // 2014 default actions: Dash, Disengage, Dodge, Grapple, Help, Hide
-      defaultActions: ['Dash', 'Disengage', 'Dodge', 'Grapple', 'Help', 'Hide'],
-      isModern: false,
-      settingsKey: 'selectedCPRActionsLegacy'
-    };
-  }
 }
 
 const openAutoPopulateConfiguration = async () => {
@@ -458,14 +428,15 @@ export function registerSettings() {
     restricted: true,
   });
 
-  // Display submenu
+  // Display submenu — player-visible: holds per-client display preferences.
+  // (Any GM-only settings mixed in are hidden/skipped for non-GMs by the submenu factory.)
   game.settings.registerMenu(MODULE_ID, 'displaySettingsMenu', {
     name: `${MODULE_ID}.Settings.Display.MenuName`,
     label: `${MODULE_ID}.Settings.Display.MenuLabel`,
     hint: `${MODULE_ID}.Settings.Display.MenuHint`,
     icon: 'fas fa-list',
     type: DisplaySettingsMenu,
-    restricted: true
+    restricted: false
   });
 
   // Auto-populate submenu

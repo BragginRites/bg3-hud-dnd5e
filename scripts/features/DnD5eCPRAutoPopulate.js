@@ -3,6 +3,11 @@
  * Handles auto-population of CPR (Chris's Premades) actions to the quick access container
  */
 
+import { createLogger } from '/modules/bg3-hud-core/scripts/utils/logger.js';
+import { getCPRConfig } from '../constants/cprBlockedHotbarActions.js';
+
+const log = createLogger('bg3-hud-dnd5e');
+
 const MODULE_ID = 'bg3-hud-dnd5e';
 
 /**
@@ -11,34 +16,11 @@ const MODULE_ID = 'bg3-hud-dnd5e';
  */
 export class DnD5eCPRAutoPopulate {
     /**
-     * Get CPR configuration based on D&D 5e rules version
+     * Get CPR configuration based on D&D 5e rules version.
      * @returns {{packName: string, packId: string, defaultActions: string[], isModern: boolean, settingsKey: string}}
      */
     getCPRConfig() {
-        // Check D&D 5e rules version setting
-        // "modern" = 2024 rules, "legacy" = 2014 rules
-        const rulesVersion = game.settings.get('dnd5e', 'rulesVersion');
-        const isModern = rulesVersion === 'modern';
-
-        if (isModern) {
-            return {
-                packName: 'CPRActions2024',
-                packId: 'chris-premades.CPRActions2024',
-                // 2024 default actions: Dash, Disengage, Dodge, Help, Hide, Ready
-                defaultActions: ['Dash', 'Disengage', 'Dodge', 'Help', 'Hide', 'Ready'],
-                isModern: true,
-                settingsKey: 'selectedCPRActionsModern'
-            };
-        } else {
-            return {
-                packName: 'CPRActions',
-                packId: 'chris-premades.CPRActions',
-                // 2014 default actions: Dash, Disengage, Dodge, Grapple, Help, Hide
-                defaultActions: ['Dash', 'Disengage', 'Dodge', 'Grapple', 'Help', 'Hide'],
-                isModern: false,
-                settingsKey: 'selectedCPRActionsLegacy'
-            };
-        }
+        return getCPRConfig();
     }
 
     /**
@@ -70,7 +52,7 @@ export class DnD5eCPRAutoPopulate {
         try {
             const pack = game.packs.get(cprConfig.packId);
             if (!pack) {
-                console.warn(`[bg3-hud-dnd5e] CPR pack ${cprConfig.packId} not found`);
+                log.warn(`CPR pack ${cprConfig.packId} not found`);
                 return;
             }
 
@@ -92,10 +74,10 @@ export class DnD5eCPRAutoPopulate {
             // Set defaults if we found any
             if (defaultUuids.length > 0) {
                 await game.settings.set(MODULE_ID, cprConfig.settingsKey, defaultUuids);
-                console.info(`[bg3-hud-dnd5e] Initialized default CPR actions (${cprConfig.isModern ? '2024' : '2014'}): ${defaultUuids.length} actions`);
+                log.info(`Initialized default CPR actions (${cprConfig.isModern ? '2024' : '2014'}): ${defaultUuids.length} actions`);
             }
         } catch (error) {
-            console.warn('[bg3-hud-dnd5e] Failed to initialize default CPR actions:', error);
+            log.warn('Failed to initialize default CPR actions:', error);
         }
     }
 
@@ -109,7 +91,7 @@ export class DnD5eCPRAutoPopulate {
      */
     async populateQuickAccess(actor, actionUuids, providedPersistence = null) {
         if (!actor || !actionUuids || actionUuids.length === 0) {
-            console.debug('[bg3-hud-dnd5e] CPR AutoPopulate: Skipping - no actor or action UUIDs');
+            log.debug('CPR AutoPopulate: Skipping - no actor or action UUIDs');
             return;
         }
 
@@ -131,18 +113,18 @@ export class DnD5eCPRAutoPopulate {
             const hasExistingItems = Object.keys(existingItems).length > 0;
 
             if (hasExistingItems) {
-                console.debug(`[bg3-hud-dnd5e] CPR AutoPopulate: Skipping - quickAccess already has ${Object.keys(existingItems).length} items`);
+                log.debug(`CPR AutoPopulate: Skipping - quickAccess already has ${Object.keys(existingItems).length} items`);
                 return; // Don't overwrite existing items
             }
 
-            console.debug(`[bg3-hud-dnd5e] CPR AutoPopulate: Populating with ${actionUuids.length} CPR actions for actor ${actor.name}`);
+            log.debug(`CPR AutoPopulate: Populating with ${actionUuids.length} CPR actions for actor ${actor.name}`);
 
             // For each compendium UUID, ensure item exists on actor and collect embedded UUIDs
             const embeddedActions = [];
             for (const compendiumUuid of actionUuids) {
                 const compendiumItem = await fromUuid(compendiumUuid);
                 if (!compendiumItem) {
-                    console.warn(`[bg3-hud-dnd5e] CPR AutoPopulate: Could not resolve ${compendiumUuid}`);
+                    log.warn(`CPR AutoPopulate: Could not resolve ${compendiumUuid}`);
                     continue;
                 }
 
@@ -158,7 +140,7 @@ export class DnD5eCPRAutoPopulate {
                     actorItem = created?.[0];
 
                     if (actorItem) {
-                        console.debug(`[bg3-hud-dnd5e] CPR AutoPopulate: Created item ${actorItem.name} on actor`);
+                        log.debug(`CPR AutoPopulate: Created item ${actorItem.name} on actor`);
                     }
                 }
 
@@ -169,7 +151,7 @@ export class DnD5eCPRAutoPopulate {
             }
 
             if (embeddedActions.length === 0) {
-                console.warn('[bg3-hud-dnd5e] CPR AutoPopulate: No items could be created/found on actor');
+                log.warn('CPR AutoPopulate: No items could be created/found on actor');
                 return;
             }
 
@@ -206,7 +188,7 @@ export class DnD5eCPRAutoPopulate {
             // Save updated state
             await tempPersistence.saveState(state);
 
-            console.debug(`[bg3-hud-dnd5e] Populated quickAccess with ${maxActions} CPR actions (embedded) in slots: ${populatedSlots.join(', ')}`);
+            log.debug(`Populated quickAccess with ${maxActions} CPR actions (embedded) in slots: ${populatedSlots.join(', ')}`);
 
             // Delay before refreshing HUD (50ms after quickAccess population)
             await new Promise(resolve => setTimeout(resolve, 50));
@@ -216,7 +198,7 @@ export class DnD5eCPRAutoPopulate {
                 await ui.BG3HUD_APP.refresh();
             }
         } catch (error) {
-            console.error('[bg3-hud-dnd5e] Error populating quickAccess with CPR actions:', error);
+            log.error('Error populating quickAccess with CPR actions:', error);
         }
     }
 
@@ -249,7 +231,7 @@ export class DnD5eCPRAutoPopulate {
                 // If no actions selected, get actions based on rules version (fallback)
                 const pack = game.packs.get(cprConfig.packId);
                 if (!pack) {
-                    console.warn(`[bg3-hud-dnd5e] ${cprConfig.packName} pack not found`);
+                    log.warn(`${cprConfig.packName} pack not found`);
                     return;
                 }
 
@@ -270,7 +252,7 @@ export class DnD5eCPRAutoPopulate {
                 await this.populateQuickAccess(actor, selectedActions.slice(0, 6), persistenceManager);
             }
         } catch (error) {
-            console.error('[bg3-hud-dnd5e] Error populating CPR actions on token creation:', error);
+            log.error('Error populating CPR actions on token creation:', error);
         }
     }
 

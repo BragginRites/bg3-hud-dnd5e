@@ -3,7 +3,9 @@
     "Rest": "Descansar",
     "RestTooltip": "Descansar<br><span style='font-size: 0.85em; opacity: 0.8;'>Clique: Escolher tipo de descanso<br>Ctrl+Clique: Descanso Curto<br>Alt+Clique: Descanso Longo</span>",
     "ChooseRestType": "Escolha um tipo de descanso:",
-    "EndTurn": "Encerrar Turno"
+    "EndTurn": "Encerrar Turno",
+    "Inspiration": "Inspiração",
+    "InspirationTooltip": "Heroic Inspiration<br><span style='font-size: 0.85em; opacity: 0.8;'>Clique-Esquerdo para alternar o status da Heroic Inspiration.</span>"
   },
   "bg3-hud-dnd5e": {
     "Settings": {
@@ -26,8 +28,8 @@
       "PortraitSourceActor": "Retrato do Personagem",
       "ShowHPControls": "Mostrar Botões de Controle de PV",
       "ShowHPControlsHint": "Exibe o botões de matar (caveira) e curar (coração) nos controles de PV do retrato",
-      "HideDeathSaves": "Ocultar Interface de Salvaguardas de Morte",
-      "HideDeathSavesHint": "Oculta completamente as linhas de salvaguardas de morte quando estiver em 0 PV",
+      "HideDeathSaves": "Ocultar Resultados de Salvaguardas de Morte dos Jogadores",
+      "HideDeathSavesHint": "Somente Mestre. Quando ativado, os jogadores veem apenas o botão de rolagem (caveira) e suas rolagens são enviadas em segredo ao Mestre. O Mestre continua vendo os marcadores de sucesso/falha.",
       "IgnoreGroupActors": "Ignorar Atores de Grupo",
       "IgnoreGroupActorsHint": "Quando ativado, atores do tipo 'group' são excluídos das verificações de compatibilidade do BG3 HUD",
       "EnableCPRGenericActions": "Ativar Botão de Ações Genéricas do CPR",
@@ -38,8 +40,10 @@
       "SelectedCPRActionsHint": "Ações do CPR escolhidas manualmente para acesso rápido (configure através do menu 'Selecionar Ações do CPR'). A lista é preenchida com o compêndio correspondente à sua Versão das Regras de D&D 5e",
       "AllowCPRActionsInAutoPopulate": "Permitir Ações do CPR no Auto-Preenchimento da Hotbar",
       "AllowCPRActionsInAutoPopulateHint": "Quando ativado, ações genéricas do CPR (Correr, Esquivar, Atacar, etc.) podem ser incluídas ao auto-preencher a hotbar principal. Arrastar e soltar é sempre permitido em qualquer grade",
-      "EnableAdvBtnsMidiQoL": "Ativar Botões de Vantagem/Desvantagem (Midi-QoL)",
-      "EnableAdvBtnsMidiQoLHint": "Adicione botões de vantagem/desvantagem ao contêiner de bônus situacionais quando o Midi-QoL estiver ativo",
+      "EnableAdvBtnsMidiQoL": "Aplicar VANT/DESV às Rolagens do Midi-QoL",
+      "EnableAdvBtnsMidiQoLHint": "Quando ativado com o Midi-QoL habilitado, o estado dos botões VANT/DESV é aplicado à próxima rolagem qualificada. Os botões permanecem sempre visíveis como lembretes, independentemente dessa configuração",
+      "SyncBonusReactionFilters": "Sincronizar Filtros de Bônus e Reação",
+      "SyncBonusReactionFiltersHint": "Quando ativado com o Midi-QoL habilitado, marca os filtros de Ação Bônus e Reação como usados ​​(igual ao clique-direito) quando o Midi-QoL aplicar o efeito de economia de ações correspondente. Exige as seguintes Configurações de Workflow do Midi-QoL > Reações: ambas \"Forçar Reações\" e \"Forçar Ações Bônus\" devem estar configuradas como \"Todos Atores: Avisar se Usado\".",
       "AutoPopulateOnTokenCreation": "Auto-Preencher ao Criar Token",
       "AutoPopulateOnTokenCreationHint": "Ao criar um token, preenche automaticamente as grades da hotbar com itens",
       "AutoPopulatePlayerCharacters": "Permitir Auto-Preencher para Personagens de Jogador",

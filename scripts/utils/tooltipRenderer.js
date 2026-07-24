@@ -3,6 +3,39 @@
  * Handles rendering tooltips for items, activities, and macros
  */
 
+import { createLogger } from '/modules/bg3-hud-core/scripts/utils/logger.js';
+
+const log = createLogger('bg3-hud-dnd5e');
+
+/**
+ * Format a D&D 5e activation type/value into a display label
+ * (e.g. "action" -> "Action", "bonus" -> "Bonus Action", "minute"/2 -> "2 Minutes").
+ * @param {string} activationType - The activation type
+ * @param {number} [activationValue] - The activation value (count)
+ * @returns {string} Display label
+ */
+function formatActivation(activationType, activationValue) {
+    if (activationType === 'action') {
+        return activationValue && activationValue !== 1
+            ? `${activationValue} Actions`
+            : 'Action';
+    } else if (activationType === 'bonus') {
+        return 'Bonus Action';
+    } else if (activationType === 'reaction') {
+        return 'Reaction';
+    } else if (activationType === 'minute') {
+        const value = activationValue ?? 1;
+        return `${value} ${value === 1 ? 'Minute' : 'Minutes'}`;
+    } else if (activationType === 'hour') {
+        const value = activationValue ?? 1;
+        return `${value} ${value === 1 ? 'Hour' : 'Hours'}`;
+    }
+
+    // For other types, include value if present
+    const label = activationType.charAt(0).toUpperCase() + activationType.slice(1);
+    return activationValue ? `${activationValue} ${label}` : label;
+}
+
 /**
  * Extract component and cast time tags from item/activity data
  * @param {Object} itemOrActivity - Item or activity data
@@ -89,33 +122,7 @@ function extractComponentAndCastTimeTags(itemOrActivity, labels, parentItem = nu
             const firstActivity = sortedActivities[0].activity;
             if (firstActivity?.activation?.type) {
                 hasActivityCastTime = true;
-                // Format activation type (e.g., "action" -> "Action", "bonus" -> "Bonus Action")
-                const activationType = firstActivity.activation.type;
-                const activationValue = firstActivity.activation.value;
-
-                // Format based on type - include value when present
-                if (activationType === 'action') {
-                    castTime = activationValue && activationValue !== 1
-                        ? `${activationValue} Actions`
-                        : 'Action';
-                } else if (activationType === 'bonus') {
-                    castTime = 'Bonus Action';
-                } else if (activationType === 'reaction') {
-                    castTime = 'Reaction';
-                } else if (activationType === 'minute') {
-                    const value = activationValue ?? 1;
-                    castTime = `${value} ${value === 1 ? 'Minute' : 'Minutes'}`;
-                } else if (activationType === 'hour') {
-                    const value = activationValue ?? 1;
-                    castTime = `${value} ${value === 1 ? 'Hour' : 'Hours'}`;
-                } else {
-                    // For other types, include value if present
-                    if (activationValue) {
-                        castTime = `${activationValue} ${activationType.charAt(0).toUpperCase() + activationType.slice(1)}`;
-                    } else {
-                        castTime = activationType.charAt(0).toUpperCase() + activationType.slice(1);
-                    }
-                }
+                castTime = formatActivation(firstActivity.activation.type, firstActivity.activation.value);
             }
         }
     }
@@ -129,30 +136,7 @@ function extractComponentAndCastTimeTags(itemOrActivity, labels, parentItem = nu
         // Fall back to system.activation if still no cast time
         else if (itemOrActivity.system?.activation?.type ?? parentItem?.system?.activation?.type) {
             const activation = itemOrActivity.system?.activation ?? parentItem.system.activation;
-            const activationType = activation.type;
-            const activationValue = activation.value;
-
-            if (activationType === 'action') {
-                castTime = activationValue && activationValue !== 1
-                    ? `${activationValue} Actions`
-                    : 'Action';
-            } else if (activationType === 'bonus') {
-                castTime = 'Bonus Action';
-            } else if (activationType === 'reaction') {
-                castTime = 'Reaction';
-            } else if (activationType === 'minute') {
-                const value = activationValue ?? 1;
-                castTime = `${value} ${value === 1 ? 'Minute' : 'Minutes'}`;
-            } else if (activationType === 'hour') {
-                const value = activationValue ?? 1;
-                castTime = `${value} ${value === 1 ? 'Hour' : 'Hours'}`;
-            } else {
-                if (activationValue) {
-                    castTime = `${activationValue} ${activationType.charAt(0).toUpperCase() + activationType.slice(1)}`;
-                } else {
-                    castTime = activationType.charAt(0).toUpperCase() + activationType.slice(1);
-                }
-            }
+            castTime = formatActivation(activation.type, activation.value);
         }
     }
 
@@ -468,7 +452,7 @@ export async function renderDnD5eTooltip(data, options = {}) {
                 parentItem = data.item instanceof Item ? data.item : await fromUuid(data.item.uuid);
             } else {
                 // Fallback: try to get item from the activity's context
-                console.warn('[bg3-hud-dnd5e] Could not determine parent item for activity:', data);
+                log.warn('Could not determine parent item for activity:', data);
                 // Try to use the activity as if it were an item
                 cardData = await getItemCardData(data, options);
                 templatePath = 'modules/bg3-hud-dnd5e/templates/tooltips/item-tooltip.hbs';
@@ -488,7 +472,7 @@ export async function renderDnD5eTooltip(data, options = {}) {
         const html = await foundry.applications.handlebars.renderTemplate(templatePath, cardData);
 
         if (!html) {
-            console.warn('[bg3-hud-dnd5e] Template rendered empty HTML');
+            log.warn('Template rendered empty HTML');
             return null;
         }
 
@@ -498,8 +482,8 @@ export async function renderDnD5eTooltip(data, options = {}) {
             direction: 'UP'
         };
     } catch (error) {
-        console.error('[bg3-hud-dnd5e] Error rendering tooltip:', error);
-        console.error('[bg3-hud-dnd5e] Error stack:', error.stack);
+        log.error('Error rendering tooltip:', error);
+        log.error('Error stack:', error.stack);
         return null;
     }
 }

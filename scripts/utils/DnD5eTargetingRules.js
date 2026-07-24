@@ -14,6 +14,11 @@
 export function needsTargeting({ item, activity = null }) {
     if (!item) return false;
 
+    // Specific activity wins (e.g. Starry Form "Dragon" is self-consume)
+    if (activity) {
+        return _activityNeedsTargeting(activity);
+    }
+
     // Check if targeting is explicitly disabled at item level
     if (item.system?.target?.type === 'self' || item.system?.target?.type === 'none') {
         return false;
@@ -24,41 +29,24 @@ export function needsTargeting({ item, activity = null }) {
         return false;
     }
 
+    // Prefer activity-level targeting when the item has activities.
+    // Multi-activity features (Starry Form, Celestial Revelation, etc.) often mix
+    // self-consume activities with attack/save activities. Pre-running the HUD
+    // target selector before item.use() breaks consumption for those self
+    // activities, so only require it when EVERY choosable non-AoE activity needs
+    // a target (or when a specific activity was supplied above).
+    if (item.system?.activities) {
+        const activities = Array.from(item.system.activities.values?.() ?? []);
+        if (activities.length > 0) {
+            const relevant = activities.filter((act) => !act?.target?.template?.type);
+            if (relevant.length === 0) return false;
+            return relevant.every((act) => _activityNeedsTargeting(act));
+        }
+    }
+
     // Check item-level target configuration
     if (item.system?.target?.type && item.system.target.type !== 'self') {
         return true;
-    }
-
-    // Check activities for targeting requirements (Foundry v12+)
-    if (item.system?.activities) {
-        const activities = Array.from(item.system.activities.values());
-
-        // Check if ANY activity needs targeting
-        for (const act of activities) {
-            // Skip activities with templates (AoE)
-            if (act.target?.template?.type) {
-                continue;
-            }
-
-            // Check for range that needs targeting
-            if (act.range?.value && parseInt(act.range.value) > 0 && act.range.units !== 'self') {
-                return true;
-            }
-
-            // Check for target information
-            if (act.target) {
-                const targetType = act.target.type || act.target.affects?.type;
-                // Skip self and none targeting
-                if (targetType === 'self' || targetType === 'none') {
-                    continue;
-                }
-                // If there's target information (type or count), activate targeting
-                if (targetType || act.target.affects?.count !== undefined) {
-                    return true;
-                }
-            }
-        }
-        return false;
     }
 
     // Check for attack rolls (weapons, attack spells)
@@ -85,6 +73,34 @@ export function needsTargeting({ item, activity = null }) {
         if (range?.value && range.value > 0 && range.units !== 'self') {
             return true;
         }
+    }
+
+    return false;
+}
+
+/**
+ * Whether a single activity needs the HUD target selector.
+ * @param {Object} act
+ * @returns {boolean}
+ * @private
+ */
+function _activityNeedsTargeting(act) {
+    if (!act) return false;
+
+    // AoE templates use Foundry's template workflow
+    if (act.target?.template?.type) return false;
+
+    const targetType = act.target?.type || act.target?.affects?.type;
+    if (targetType === 'self' || targetType === 'none') return false;
+
+    if (act.range?.units === 'self') return false;
+
+    if (act.range?.value && parseInt(act.range.value) > 0 && act.range.units !== 'self') {
+        return true;
+    }
+
+    if (targetType || act.target?.affects?.count !== undefined) {
+        return true;
     }
 
     return false;
@@ -174,6 +190,7 @@ export function getTargetRequirements({ item, activity = null }) {
 
 /**
  * Check if a token is a valid target given requirements.
+ * Only self / enemy disposition checks. Count and range are handled by core.
  * @param {Object} params
  * @param {Token} params.sourceToken - The attacking/casting token
  * @param {Token} params.targetToken - The potential target token
@@ -181,58 +198,39 @@ export function getTargetRequirements({ item, activity = null }) {
  * @returns {Object} { valid: boolean, reason: string|null }
  */
 export function isValidTargetType({ sourceToken, targetToken, requirements }) {
-    if (!targetToken) {
+    if (!targetToken?.actor) {
         return { valid: false, reason: game.i18n.localize('bg3-hud-core.TargetSelector.InvalidTarget') };
     }
 
-    if (!targetToken.actor) {
-        return { valid: false, reason: game.i18n.localize('BG3.TargetSelector.NoActor') };
+    const targetType = requirements?.targetType;
+    if (!targetType || targetType === 'any') {
+        return { valid: true, reason: null };
     }
-
-    // Check visibility
-    if (!targetToken.isVisible || targetToken.document.hidden) {
-        return { valid: false, reason: game.i18n.localize('BG3.TargetSelector.TokenNotVisible') };
-    }
-
-    // Check target type
-    const targetType = requirements.targetType;
 
     if (targetType === 'self') {
         if (targetToken !== sourceToken) {
-            return { valid: false, reason: game.i18n.localize('BG3.TargetSelector.SelfOnly') };
+            return { valid: false, reason: game.i18n.localize('bg3-hud-core.TargetSelector.SelfOnly') };
         }
-    } else if (targetType === 'other' || targetType === 'enemy') {
-        // Can't target self
-        if (targetToken === sourceToken) {
-            return { valid: false, reason: game.i18n.localize('BG3.TargetSelector.CannotTargetSelf') };
-        }
-
-        // Check disposition for enemy
-        if (targetType === 'enemy') {
-            const isEnemy = _isEnemy(sourceToken, targetToken);
-            if (!isEnemy) {
-                return { valid: false, reason: game.i18n.localize('BG3.TargetSelector.MustBeEnemy') };
-            }
-        }
-    } else if (targetType === 'ally' || targetType === 'willing') {
-        // Must be friendly
-        const isFriendly = _isFriendly(sourceToken, targetToken);
-        if (!isFriendly) {
-            return { valid: false, reason: game.i18n.localize('BG3.TargetSelector.MustBeAlly') };
-        }
-    } else if (targetType === 'creature') {
-        // Must have a creature type (not object/etc)
-        const creatureType = targetToken.actor?.system?.details?.type?.value;
-        if (!creatureType || creatureType === 'object') {
-            return { valid: false, reason: game.i18n.localize('BG3.TargetSelector.MustBeCreature') };
-        }
+        return { valid: true, reason: null };
     }
 
+    // Enemy / other: not self, and hostile disposition when typed as enemy
+    if (targetType === 'enemy' || targetType === 'other') {
+        if (targetToken === sourceToken) {
+            return { valid: false, reason: game.i18n.localize('bg3-hud-core.TargetSelector.CannotTargetSelf') };
+        }
+        if (targetType === 'enemy' && !_isEnemy(sourceToken, targetToken)) {
+            return { valid: false, reason: game.i18n.localize('bg3-hud-core.TargetSelector.MustBeEnemy') };
+        }
+        return { valid: true, reason: null };
+    }
+
+    // Ally / creature / etc. are not enforced here - leave that to the system workflow
     return { valid: true, reason: null };
 }
 
 /**
- * Get enhanced target info for display.
+ * Get basic target info for display (name, distance, in-range only).
  * @param {Object} params
  * @param {Token} params.sourceToken - The source token
  * @param {Token} params.targetToken - The target token
@@ -246,18 +244,14 @@ export function getTargetInfo({ sourceToken, targetToken, item, activity = null 
         img: targetToken?.document?.texture?.src || 'icons/svg/mystery-man.svg',
         inRange: true,
         inLongRange: true,
-        coverStatus: 'none',
-        isFlanked: false,
         distance: null,
-        disposition: _getDispositionLabel(targetToken),
-        statusEffects: []
+        disposition: _getDispositionLabel(targetToken)
     };
 
     if (!sourceToken || !targetToken || !canvas?.grid) {
         return info;
     }
 
-    // Calculate distance (simplified - uses center-to-center)
     const dx = targetToken.center.x - sourceToken.center.x;
     const dy = targetToken.center.y - sourceToken.center.y;
     const distPixels = Math.sqrt(dx * dx + dy * dy);
@@ -265,21 +259,12 @@ export function getTargetInfo({ sourceToken, targetToken, item, activity = null 
     const gridSize = canvas.grid.size;
     info.distance = (distPixels / gridSize) * gridDistance;
 
-    // Check range
     const rangeInfo = calculateRange({ item, activity, actor: item?.actor });
     if (rangeInfo.range && info.distance > rangeInfo.range) {
         info.inRange = false;
     }
     if (rangeInfo.longRange && info.distance > rangeInfo.longRange) {
         info.inLongRange = false;
-    }
-
-    // Get relevant status effects from target
-    const effects = targetToken.actor?.statuses || new Set();
-    for (const status of effects) {
-        if (['prone', 'paralyzed', 'stunned', 'unconscious', 'restrained', 'incapacitated'].includes(status)) {
-            info.statusEffects.push(status);
-        }
     }
 
     return info;
@@ -499,26 +484,6 @@ function _isEnemy(sourceToken, targetToken) {
 
     // Neutral doesn't really have enemies, but hostiles are close enough
     return targetDisp === HOSTILE;
-}
-
-/**
- * Check if target is friendly to source.
- * @param {Token} sourceToken
- * @param {Token} targetToken
- * @returns {boolean}
- * @private
- */
-function _isFriendly(sourceToken, targetToken) {
-    if (!sourceToken || !targetToken) return false;
-
-    // Same token is always friendly
-    if (sourceToken === targetToken) return true;
-
-    const sourceDisp = sourceToken.document.disposition;
-    const targetDisp = targetToken.document.disposition;
-
-    // Same disposition = friendly
-    return sourceDisp === targetDisp;
 }
 
 /**

@@ -1,4 +1,5 @@
 import { MenuBuilder } from '/modules/bg3-hud-core/scripts/components/ui/MenuBuilder.js';
+import { resolveUseTokenImage } from '/modules/bg3-hud-core/scripts/utils/portraitImage.js';
 
 const MODULE_ID = 'bg3-hud-dnd5e';
 
@@ -19,9 +20,7 @@ export class DnD5eMenuBuilder extends MenuBuilder {
         if (!actor) return [];
 
         // Get current preferences from actor flags, falling back to the client default.
-        const actorImagePreference = actor.getFlag(MODULE_ID, 'useTokenImage');
-        const defaultUseTokenImage = game.settings.get(MODULE_ID, 'defaultPortraitImageSource') !== 'portrait';
-        const useTokenImage = actorImagePreference !== undefined ? actorImagePreference : defaultUseTokenImage;
+        const useTokenImage = resolveUseTokenImage(actor, MODULE_ID);
         const scaleWithToken = actor.getFlag(MODULE_ID, 'scaleWithToken') ?? false;
         
         // Check if token has non-default scale

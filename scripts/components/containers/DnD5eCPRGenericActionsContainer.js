@@ -6,6 +6,9 @@
  */
 
 import { BG3Component } from '/modules/bg3-hud-core/scripts/components/BG3Component.js';
+import { createLogger } from '/modules/bg3-hud-core/scripts/utils/logger.js';
+
+const log = createLogger('bg3-hud-dnd5e');
 
 const MODULE_ID = 'bg3-hud-dnd5e';
 
@@ -152,7 +155,7 @@ export class DnD5eCPRGenericActionsContainer extends BG3Component {
                     return;
                 }
 
-                console.log(`[bg3-hud-dnd5e] Created CPR Generic Actions item on actor: ${actorItem.name}`);
+                log.debug(`Created CPR Generic Actions item on actor: ${actorItem.name}`);
             }
 
             // Use the embedded item (never delete - active effects require persistence)
@@ -164,7 +167,7 @@ export class DnD5eCPRGenericActionsContainer extends BG3Component {
                 );
             }
         } catch (error) {
-            console.error('[bg3-hud-dnd5e] DnD5eCPRGenericActionsContainer | Error using CPR Generic Actions:', error);
+            log.error('DnD5eCPRGenericActionsContainer | Error using CPR Generic Actions:', error);
             ui.notifications.error(
                 game.i18n.localize(`${MODULE_ID}.Notifications.CPRGenericActionsError`)
             );

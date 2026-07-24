@@ -3,6 +3,11 @@
  * This will be dynamically created to extend the core PortraitContainer
  * when the module loads and core is available
  */
+import { createLogger } from '/modules/bg3-hud-core/scripts/utils/logger.js';
+import { resolveUseTokenImage } from '/modules/bg3-hud-core/scripts/utils/portraitImage.js';
+
+const log = createLogger('bg3-hud-dnd5e');
+
 export async function createDnD5ePortraitContainer() {
     // Import core components dynamically
     const { PortraitContainer } = await import('/modules/bg3-hud-core/scripts/components/containers/PortraitContainer.js');
@@ -188,7 +193,7 @@ export async function createDnD5ePortraitContainer() {
          */
         async updateHealth() {
             if (!this.element) {
-                console.warn('[bg3-hud-dnd5e] PortraitHealth | Cannot update health, element not rendered yet');
+                log.warn('PortraitHealth | Cannot update health, element not rendered yet');
                 return;
             }
 
@@ -330,7 +335,9 @@ export async function createDnD5ePortraitContainer() {
             this.element.style.opacity = '1';
 
             const deathData = this.getDeathSaveData();
-            const hidePips = game.settings.get('bg3-hud-dnd5e', 'hideDeathSaves');
+            // "Hide Death Saves" (GM/world setting): players see only the skull (roll button) and
+            // their rolls go privately to the GM. The GM still sees the pips to track the drama.
+            const hidePips = game.settings.get('bg3-hud-dnd5e', 'hideDeathSaves') && !game.user.isGM;
 
             // Success boxes (3 boxes, filled from bottom up: index 0 = bottom/closest to skull)
             const successGroup = this.createElement('div', ['death-saves-group']);
@@ -436,7 +443,7 @@ export async function createDnD5ePortraitContainer() {
             void this.element.offsetHeight;
             this.element.style.opacity = '1';
 
-            const hidePips = game.settings.get('bg3-hud-dnd5e', 'hideDeathSaves');
+            const hidePips = game.settings.get('bg3-hud-dnd5e', 'hideDeathSaves') && !game.user.isGM;
             const groups = this.element.querySelectorAll('.death-saves-group');
             groups.forEach(g => {
                 g.style.display = hidePips ? 'none' : 'flex';
@@ -504,15 +511,17 @@ export async function createDnD5ePortraitContainer() {
             if (!this.actor || this.actor.type !== 'character') return;
 
             try {
-                // Roll death save with appropriate modifiers
-                const hidePips = game.settings.get('bg3-hud-dnd5e', 'hideDeathSaves');
+                // Roll death save with appropriate modifiers.
+                // When "Hide Death Saves" is on, a player's roll is sent blind so only the GM sees
+                // the result; a GM rolling for themselves sees it normally.
+                const hideFromPlayer = game.settings.get('bg3-hud-dnd5e', 'hideDeathSaves') && !game.user.isGM;
                 const rollOptions = {
                     event: event,
                     advantage: event.altKey,
                     disadvantage: event.ctrlKey,
                     fastForward: event.shiftKey
                 };
-                const messageOptions = hidePips ? { rollMode: 'blindroll' } : {};
+                const messageOptions = hideFromPlayer ? { rollMode: 'blindroll' } : {};
                 
                 const roll = await this.actor.rollDeathSave(rollOptions, {}, messageOptions);
 
@@ -521,7 +530,7 @@ export async function createDnD5ePortraitContainer() {
                     await this.update();
                 }
             } catch (error) {
-                console.error('[bg3-hud-dnd5e] DeathSaves | Error rolling death save:', error);
+                log.error('DeathSaves | Error rolling death save:', error);
             }
         }
 
@@ -584,9 +593,7 @@ export async function createDnD5ePortraitContainer() {
          * @returns {boolean}
          */
         _useTokenImage() {
-            const actorPreference = this.actor?.getFlag('bg3-hud-dnd5e', 'useTokenImage');
-            if (actorPreference !== undefined) return actorPreference;
-            return game.settings.get('bg3-hud-dnd5e', 'defaultPortraitImageSource') !== 'portrait';
+            return resolveUseTokenImage(this.actor, 'bg3-hud-dnd5e');
         }
 
         /**
@@ -625,62 +632,14 @@ export async function createDnD5ePortraitContainer() {
         }
 
         /**
-         * Sync health overlay alpha mask to the current portrait media.
-         * @param {HTMLElement} portraitImageSubContainer
-         * @private
-         */
-        _syncPortraitAlphaMask(portraitImageSubContainer) {
-            if (!portraitImageSubContainer || !this.element) return;
-
-            const showHealthOverlay = game.settings.get('bg3-hud-dnd5e', 'showHealthOverlay') ?? true;
-            const media = portraitImageSubContainer.querySelector('.portrait-image, .portrait-video');
-            const isVideo = media?.tagName === 'VIDEO';
-
-            if (!showHealthOverlay || !media || isVideo) {
-                portraitImageSubContainer.removeAttribute('data-bend-mode');
-                portraitImageSubContainer.style.removeProperty('--bend-img');
-                this.element.classList.remove('use-bend-mask');
-                return;
-            }
-
-            portraitImageSubContainer.setAttribute('data-bend-mode', 'true');
-            portraitImageSubContainer.style.setProperty('--bend-img', `url("${media.src}")`);
-            this.element.classList.add('use-bend-mask');
-        }
-
-        /**
-         * Update image preference (toggle between token and portrait)
-         * @returns {Promise<void>}
-         * @deprecated Use actor.setFlag directly from menu builder
-         */
-        async updateImagePreference() {
-            if (!this.actor) return;
-
-            // Get current preference
-            const currentPreference = this._useTokenImage();
-
-            // Toggle the preference
-            const newPreference = !currentPreference;
-
-            // Save to actor flags
-            await this.actor.setFlag('bg3-hud-dnd5e', 'useTokenImage', newPreference);
-
-            // The UpdateCoordinator will handle the re-render via _handleAdapterFlags
-        }
-
-        /**
-         * Swap portrait context and refresh mask/child components for the new token.
+         * Swap portrait context and refresh death saves for the new token.
+         * Alpha mask sync happens in core `swapTokenContext`.
          * @param {Actor} actor
          * @param {Token} token
          * @returns {Promise<HTMLElement>}
          */
         async swapTokenContext(actor, token) {
             await super.swapTokenContext(actor, token);
-
-            const portraitImageSubContainer = this.element?.querySelector('.portrait-image-subcontainer');
-            if (portraitImageSubContainer) {
-                this._syncPortraitAlphaMask(portraitImageSubContainer);
-            }
 
             if (this.components.deathSaves) {
                 this.components.deathSaves.actor = actor;
@@ -704,7 +663,7 @@ export async function createDnD5ePortraitContainer() {
             }
 
             if (!this.token || !this.actor) {
-                console.warn('[bg3-hud-dnd5e] DnD5ePortraitContainer | No token or actor provided');
+                log.warn('DnD5ePortraitContainer | No token or actor provided');
                 return this.element;
             }
 
@@ -718,7 +677,7 @@ export async function createDnD5ePortraitContainer() {
                     const infoElement = await this.infoContainer.render();
                     this.element.appendChild(infoElement);
                 } catch (e) {
-                    console.warn('[bg3-hud-dnd5e] DnD5ePortraitContainer | Failed to render info container', e);
+                    log.warn('DnD5ePortraitContainer | Failed to render info container', e);
                 }
             }
 

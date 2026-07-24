@@ -46,33 +46,35 @@ export class DnD5eActionButtonsContainer extends ActionButtonsContainer {
             }
         });
 
-        // Rest button (visible outside combat) - Ctrl for short rest, Alt for long rest, or dialog
+        const restVisible = () => !game.combat?.started;
+
+        // Short Rest / Long Rest (legacy inspired-hotbar split; no dialog on click)
         buttons.push({
-            key: 'rest',
+            key: 'short-rest',
             classes: ['rest-button'],
-            icon: 'fas fa-bed',
-            label: game.i18n.localize('BG3HUD.Rest'),
-            tooltip: game.i18n.localize('BG3HUD.RestTooltip'),
+            icon: 'fas fa-campfire',
+            label: game.i18n.localize('bg3-hud-dnd5e.RestDialog.ShortRest'),
+            tooltip: game.i18n.localize('bg3-hud-dnd5e.RestDialog.ShortRest'),
             tooltipDirection: 'LEFT',
-            visible: () => {
-                return !game.combat?.started;
-            },
-            onClick: async (event) => {
-                // Ctrl = Short Rest
-                if (event.ctrlKey || event.metaKey) {
-                    if (this.actor && typeof this.actor.shortRest === 'function') {
-                        await this.actor.shortRest();
-                    }
+            visible: restVisible,
+            onClick: async () => {
+                if (this.actor && typeof this.actor.shortRest === 'function') {
+                    await this.actor.shortRest();
                 }
-                // Alt = Long Rest
-                else if (event.altKey) {
-                    if (this.actor && typeof this.actor.longRest === 'function') {
-                        await this.actor.longRest();
-                    }
-                }
-                // No modifier = Show dialog
-                else {
-                    await this.showRestDialog();
+            }
+        });
+
+        buttons.push({
+            key: 'long-rest',
+            classes: ['rest-button'],
+            icon: 'fas fa-tent',
+            label: game.i18n.localize('bg3-hud-dnd5e.RestDialog.LongRest'),
+            tooltip: game.i18n.localize('bg3-hud-dnd5e.RestDialog.LongRest'),
+            tooltipDirection: 'LEFT',
+            visible: restVisible,
+            onClick: async () => {
+                if (this.actor && typeof this.actor.longRest === 'function') {
+                    await this.actor.longRest();
                 }
             }
         });
@@ -81,11 +83,11 @@ export class DnD5eActionButtonsContainer extends ActionButtonsContainer {
     }
 
     /**
-     * Show rest type selection dialog
+     * Show rest type selection dialog.
+     * Kept available but not wired to the rest buttons (short/long are direct).
      */
     async showRestDialog() {
         const { showRestDialog } = await import('../ui/RestDialog.js');
         await showRestDialog(this.actor);
     }
 }
-

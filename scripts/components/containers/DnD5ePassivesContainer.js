@@ -1,5 +1,9 @@
+import { createLogger } from '/modules/bg3-hud-core/scripts/utils/logger.js';
+
 // Import showSelectionDialog from core utilities
 const { showSelectionDialog } = await import('/modules/bg3-hud-core/scripts/utils/dialogs.js');
+
+const log = createLogger('bg3-hud-dnd5e');
 
 const MODULE_ID = 'bg3-hud-dnd5e';
 
@@ -94,7 +98,7 @@ export async function createDnD5ePassivesContainer() {
                 // Save the item IDs (not UUIDs) and the persistence flag
                 await baseActor.setFlag(MODULE_ID, 'passivesItemIds', itemIds);
                 await baseActor.setFlag(MODULE_ID, 'passivesSaveToBase', true);
-                console.debug('[bg3-hud-dnd5e] Saved item IDs to base actor:', itemIds);
+                log.debug('Saved item IDs to base actor:', itemIds);
             } else {
                 // User turned off the toggle - clear the flags from base actor
                 // This reverts to normal auto-populate behavior for new tokens
@@ -102,7 +106,7 @@ export async function createDnD5ePassivesContainer() {
                 if (wasEnabled) {
                     await baseActor.unsetFlag(MODULE_ID, 'passivesSaveToBase');
                     await baseActor.unsetFlag(MODULE_ID, 'passivesItemIds');
-                    console.debug('[bg3-hud-dnd5e] Cleared passives from base actor, reverting to normal auto-populate');
+                    log.debug('Cleared passives from base actor, reverting to normal auto-populate');
                 }
             }
         }

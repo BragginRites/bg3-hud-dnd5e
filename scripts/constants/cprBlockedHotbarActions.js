@@ -43,9 +43,6 @@ const GENERIC_ACTIONS_DIALOG_NAMES = [
     'Generic Actions (2024)'
 ];
 
-/** @deprecated Use CPR_EXCLUDED_AUTO_POPULATE_ACTION_NAMES */
-export const CPR_BLOCKED_HOTBAR_ACTION_NAMES = CPR_EXCLUDED_AUTO_POPULATE_ACTION_NAMES;
-
 /**
  * @param {string} name - Item or activity display name
  * @returns {boolean}
@@ -79,4 +76,34 @@ export function shouldExcludeGenericActionFromHotbarAutoAdd(doc) {
     if (!doc) return false;
     if (game.settings.get(MODULE_ID, 'allowCPRActionsInAutoPopulate')) return false;
     return isExcludedCPRAutoPopulateDocument(doc);
+}
+
+/**
+ * CPR (Chris's Premades) actions configuration for the active D&D 5e rules version.
+ * "modern" = 2024 rules, "legacy" = 2014 rules.
+ * @returns {{packName: string, packId: string, defaultActions: string[], isModern: boolean, settingsKey: string}}
+ */
+export function getCPRConfig() {
+    const rulesVersion = game.settings.get('dnd5e', 'rulesVersion');
+    const isModern = rulesVersion === 'modern';
+
+    if (isModern) {
+        return {
+            packName: 'CPRActions2024',
+            packId: 'chris-premades.CPRActions2024',
+            // 2024 default actions: Dash, Disengage, Dodge, Help, Hide, Ready
+            defaultActions: ['Dash', 'Disengage', 'Dodge', 'Help', 'Hide', 'Ready'],
+            isModern: true,
+            settingsKey: 'selectedCPRActionsModern'
+        };
+    }
+
+    return {
+        packName: 'CPRActions',
+        packId: 'chris-premades.CPRActions',
+        // 2014 default actions: Dash, Disengage, Dodge, Grapple, Help, Hide
+        defaultActions: ['Dash', 'Disengage', 'Dodge', 'Grapple', 'Help', 'Hide'],
+        isModern: false,
+        settingsKey: 'selectedCPRActionsLegacy'
+    };
 }

@@ -3,6 +3,10 @@
  * Provides methods for identifying containers, extracting their contents, and saving changes
  */
 
+import { createLogger } from '/modules/bg3-hud-core/scripts/utils/logger.js';
+
+const log = createLogger('bg3-hud-dnd5e');
+
 /**
  * Check if an item is a container (bag, pouch, box, etc.)
  * @param {Object} cellData - The cell's data object
@@ -91,7 +95,7 @@ export async function getContainerContents(containerItem, actor) {
  */
 export async function saveContainerContents(containerItem, items, actor) {
     if (!containerItem) {
-        console.warn('DnD5eContainerPopover | No container item provided for save');
+        log.warn('DnD5eContainerPopover | No container item provided for save');
         return;
     }
 

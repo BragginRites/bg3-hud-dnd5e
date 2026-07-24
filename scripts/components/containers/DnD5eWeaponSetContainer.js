@@ -6,6 +6,10 @@
  * - Prevents drops on locked second slots
  */
 
+import { createLogger } from '/modules/bg3-hud-core/scripts/utils/logger.js';
+
+const log = createLogger('bg3-hud-dnd5e');
+
 export async function createDnD5eWeaponSetContainer() {
     // Import base WeaponSetContainer from core
     const { WeaponSetContainer } = await import('../../../../bg3-hud-core/scripts/components/containers/WeaponSetContainer.js');
@@ -47,7 +51,7 @@ export async function createDnD5eWeaponSetContainer() {
 
                 return false;
             } catch (error) {
-                console.warn('[bg3-hud-dnd5e] Error checking two-handed weapon:', error);
+                log.warn('Error checking two-handed weapon:', error);
                 return false;
             }
         }
@@ -225,7 +229,7 @@ export async function createDnD5eWeaponSetContainer() {
                         if (!this._isWeaponOrShield(item)) continue;
                         items.push(item);
                     } catch (error) {
-                        console.warn('[bg3-hud-dnd5e] Failed to resolve item for weapon set cell', error);
+                        log.warn('Failed to resolve item for weapon set cell', error);
                     }
                 }
                 return items;

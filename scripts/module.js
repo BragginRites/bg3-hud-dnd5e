@@ -23,7 +23,9 @@ import {
     isExcludedCPRAutoPopulateActionName,
     shouldExcludeGenericActionFromHotbarAutoAdd
 } from './constants/cprBlockedHotbarActions.js';
+import { createLogger } from '/modules/bg3-hud-core/scripts/utils/logger.js';
 
+const log = createLogger('bg3-hud-dnd5e');
 
 const MODULE_ID = 'bg3-hud-dnd5e';
 const ADVANTAGE_ROLL_EVENTS = [
@@ -38,13 +40,13 @@ const ADVANTAGE_ROLL_EVENTS = [
 
 let advantageHooksRegistered = false;
 
-console.info('[bg3-hud-dnd5e] Loading adapter');
+log.info('Loading adapter');
 
 /**
  * Register settings
  */
 Hooks.once('init', () => {
-    console.info('[bg3-hud-dnd5e] Registering settings');
+    log.info('Registering settings');
     registerSettings();
 });
 
@@ -52,11 +54,11 @@ Hooks.once('init', () => {
  * Wait for core to be ready, then register D&D 5e components
  */
 Hooks.on('bg3HudReady', async (BG3HUD_API) => {
-    console.info('[bg3-hud-dnd5e] Received bg3HudReady hook');
+    log.info('Received bg3HudReady hook');
 
     // Verify we're in D&D 5e system
     if (game.system.id !== 'dnd5e') {
-        console.warn('[bg3-hud-dnd5e] Not running D&D 5e system, skipping registration');
+        log.warn('Not running D&D 5e system, skipping registration');
         return;
     }
 
@@ -73,7 +75,7 @@ Hooks.on('bg3HudReady', async (BG3HUD_API) => {
     const weaponBlockTemplate = await fetch('modules/bg3-hud-dnd5e/templates/tooltips/weapon-block.hbs').then(r => r.text());
     Handlebars.registerPartial('bg3-hud-dnd5e.weapon-block', weaponBlockTemplate);
 
-    console.info('[bg3-hud-dnd5e] Registering D&D 5e components');
+    log.info('Registering D&D 5e components');
 
     // Create the portrait container class (extends core's PortraitContainer)
     const DnD5ePortraitContainer = await createDnD5ePortraitContainer();
@@ -108,9 +110,6 @@ Hooks.on('bg3HudReady', async (BG3HUD_API) => {
     // Register D&D 5e CPR Generic Actions container
     BG3HUD_API.registerContainer('cprGenericActions', DnD5eCPRGenericActionsContainer);
 
-    // TODO: Register other D&D 5e specific components
-    // BG3HUD_API.registerContainer('deathSaves', DeathSavesContainer);
-
     // Create and register the adapter instance
     const adapter = new DnD5eAdapter();
     BG3HUD_API.registerAdapter(adapter, {
@@ -120,24 +119,24 @@ Hooks.on('bg3HudReady', async (BG3HUD_API) => {
 
     // Register D&D 5e menu builder
     BG3HUD_API.registerMenuBuilder('dnd5e', DnD5eMenuBuilder, { adapter: adapter });
-    console.info('[bg3-hud-dnd5e] Menu builder registered');
+    log.info('Menu builder registered');
 
     // Register D&D 5e tooltip renderer
     const tooltipManager = BG3HUD_API.getTooltipManager();
     if (!tooltipManager) {
-        console.error('[bg3-hud-dnd5e] TooltipManager not available, cannot register tooltip renderer');
+        log.error('TooltipManager not available, cannot register tooltip renderer');
     } else {
         BG3HUD_API.registerTooltipRenderer('dnd5e', renderDnD5eTooltip);
-        console.info('[bg3-hud-dnd5e] Tooltip renderer registered');
+        log.info('Tooltip renderer registered');
 
         // Align tooltip element ID for dnd5e tooltip styling while relying on our blocker to prevent system tooltips on UI
         if (tooltipManager.tooltipElement) {
             tooltipManager.tooltipElement.id = 'tooltip';
-            console.info('[bg3-hud-dnd5e] Tooltip ID set to #tooltip for dnd5e styling');
+            log.info('Tooltip ID set to #tooltip for dnd5e styling');
         }
     }
 
-    console.info('[bg3-hud-dnd5e] Registration complete');
+    log.info('Registration complete');
 
     // Initialize default CPR actions if not set
     await adapter.cprAutoPopulate.initializeDefaultActions();
@@ -186,7 +185,7 @@ class DnD5eAdapter {
         // Link autoPopulate to autoSort for consistent sorting
         this.autoPopulate.setAutoSort(this.autoSort);
 
-        console.info('[bg3-hud-dnd5e] DnD5eAdapter created with autoSort, autoPopulate, cprAutoPopulate, and targetingRules');
+        log.info('DnD5eAdapter created with autoSort, autoPopulate, cprAutoPopulate, and targetingRules');
     }
 
     /**
@@ -268,7 +267,7 @@ class DnD5eAdapter {
         const data = cell.data;
         if (!data) return;
 
-        console.debug('[bg3-hud-dnd5e] Cell clicked:', data);
+        log.debug('Cell clicked:', data);
 
         // Handle Activity type
         if (data.type === 'Activity') {
@@ -359,7 +358,7 @@ class DnD5eAdapter {
             return;
         }
 
-        console.debug('[bg3-hud-dnd5e] Using item:', itemToUse.name, isEmbedded ? '(embedded)' : '(from compendium)');
+        log.debug('Using item:', itemToUse.name, isEmbedded ? '(embedded)' : '(from compendium)');
 
         // Check if item needs targeting and target selector is enabled
         const targetSelectorEnabled = game.settings.get('bg3-hud-core', 'enableTargetSelector');
@@ -381,7 +380,7 @@ class DnD5eAdapter {
 
                     // If user cancelled (empty array returned when cancelled), abort item use
                     if (!targets || targets.length === 0) {
-                        console.debug('[bg3-hud-dnd5e] Target selection cancelled');
+                        log.debug('Target selection cancelled');
                         // Clean up temp item if we created one
                         if (createdItemId && actor.items.has(createdItemId)) {
                             await actor.deleteEmbeddedDocuments('Item', [createdItemId]);
@@ -389,9 +388,9 @@ class DnD5eAdapter {
                         return;
                     }
 
-                    console.debug('[bg3-hud-dnd5e] Targets selected:', targets.map(t => t.name).join(', '));
+                    log.debug('Targets selected:', targets.map(t => t.name).join(', '));
                 } catch (error) {
-                    console.error('[bg3-hud-dnd5e] Target selection error:', error);
+                    log.error('Target selection error:', error);
                     // Clean up temp item if we created one
                     if (createdItemId && actor.items.has(createdItemId)) {
                         await actor.deleteEmbeddedDocuments('Item', [createdItemId]);
@@ -434,7 +433,35 @@ class DnD5eAdapter {
             return;
         }
 
-        console.debug('[bg3-hud-dnd5e] Using activity:', activity.name);
+        log.debug('Using activity:', activity.name);
+
+        const item = activity.item;
+        const actor = item?.actor;
+        const targetSelectorEnabled = game.settings.get('bg3-hud-core', 'enableTargetSelector');
+        const needsTargeting = targetSelectorEnabled
+            && this.targetingRules?.needsTargeting({ item, activity });
+
+        if (needsTargeting && actor) {
+            const sourceToken = actor.token?.object
+                ?? canvas?.tokens?.placeables?.find(t => t.actor?.id === actor.id)
+                ?? null;
+            if (sourceToken) {
+                try {
+                    const targets = await ui.BG3HOTBAR?.api?.startTargetSelection({
+                        token: sourceToken,
+                        item,
+                        activity
+                    });
+                    if (!targets || targets.length === 0) {
+                        log.debug('Activity target selection cancelled');
+                        return;
+                    }
+                } catch (error) {
+                    log.error('Activity target selection error:', error);
+                    return;
+                }
+            }
+        }
 
         // Activities have their own use() method
         if (typeof activity.use === 'function') {
@@ -451,7 +478,7 @@ class DnD5eAdapter {
      */
     async transformActivityToCellData(activity) {
         if (!activity) {
-            console.warn('[bg3-hud-dnd5e] transformActivityToCellData: No activity provided');
+            log.warn('transformActivityToCellData: No activity provided');
             return null;
         }
 
@@ -482,7 +509,7 @@ class DnD5eAdapter {
         // This prevents overwriting user selections when tokens already have passives set
         const existingPassives = actor.getFlag(MODULE_ID, 'selectedPassives');
         if (existingPassives && Array.isArray(existingPassives) && existingPassives.length > 0) {
-            console.debug('[bg3-hud-dnd5e] Passives already configured on token actor, skipping auto-populate');
+            log.debug('Passives already configured on token actor, skipping auto-populate');
             return;
         }
 
@@ -494,7 +521,7 @@ class DnD5eAdapter {
             const baseActorId = tokenDocument.actorId;
             const baseActor = baseActorId ? game.actors.get(baseActorId) : null;
 
-            console.debug('[bg3-hud-dnd5e] Checking base actor for unlinked token:', {
+            log.debug('Checking base actor for unlinked token:', {
                 baseActorId,
                 baseActorFound: !!baseActor,
                 baseActorName: baseActor?.name
@@ -505,7 +532,7 @@ class DnD5eAdapter {
                 const saveToBaseEnabled = baseActor.getFlag(MODULE_ID, 'passivesSaveToBase');
                 const baseItemIds = baseActor.getFlag(MODULE_ID, 'passivesItemIds');
 
-                console.debug('[bg3-hud-dnd5e] Base actor flags:', {
+                log.debug('Base actor flags:', {
                     saveToBaseEnabled,
                     baseItemIds: baseItemIds?.length ?? 0
                 });
@@ -519,12 +546,12 @@ class DnD5eAdapter {
                         if (item) {
                             tokenUuids.push(item.uuid);
                         } else {
-                            console.warn(`[bg3-hud-dnd5e] Item ID ${itemId} not found on token actor`);
+                            log.warn(`Item ID ${itemId} not found on token actor`);
                         }
                     }
 
                     if (tokenUuids.length > 0) {
-                        console.debug('[bg3-hud-dnd5e] Copying passives from base actor to unlinked token:', tokenUuids);
+                        log.debug('Copying passives from base actor to unlinked token:', tokenUuids);
                         await actor.setFlag(MODULE_ID, 'selectedPassives', tokenUuids);
                         return;
                     }
@@ -587,7 +614,7 @@ class DnD5eAdapter {
                 persistenceManager.setToken(actor);
             }
             this._stripExcludedGenericActionsFromHotbar(persistenceManager).catch(err => {
-                console.warn('[bg3-hud-dnd5e] Deferred hotbar generic-action strip failed:', err);
+                log.warn('Deferred hotbar generic-action strip failed:', err);
             });
         }, 300);
     }
@@ -781,7 +808,7 @@ class DnD5eAdapter {
      */
     async transformItemToCellData(item) {
         if (!item) {
-            console.warn('[bg3-hud-dnd5e] transformItemToCellData: No item provided');
+            log.warn('transformItemToCellData: No item provided');
             return null;
         }
 
@@ -817,18 +844,21 @@ class DnD5eAdapter {
             const level = item.system?.level || 0;
             // D&D 5e v5.1+: use .method instead of deprecated .preparation.mode
             const method = item.system?.method ?? item.system?.preparation?.mode ?? 'spell';
+            // Spells with their own limited uses (ancestry innate grants, etc.) should
+            // never be grayed out just because the actor has no spell slots.
+            const hasOwnUses = !!cellData.uses
+                || ((parseInt(item.system?.uses?.max) || 0) > 0)
+                || ((Number(item.system?.uses?.max) || 0) > 0);
+            const usesSlots = method === 'spell' && !hasOwnUses;
 
             if (level === 0) {
                 // Cantrips never deplete
                 cellData.depleted = false;
-            } else if (method !== 'spell') {
-                // Innate, at-will, pact magic, etc. - check the spell's own uses, not slots
-                // These spells have their own resource pool independent of spell slots
+            } else if (!usesSlots) {
+                // Innate / at-will / pact / own-uses spells - ignore spell slots
                 if (cellData.uses) {
-                    // Has uses configured - depleted when uses.value is 0
                     cellData.depleted = cellData.uses.value <= 0;
                 } else {
-                    // No uses configured - can always be cast (at-will)
                     cellData.depleted = false;
                 }
             } else {
@@ -913,11 +943,11 @@ class DnD5eAdapter {
                 if (level === 0) continue; // Cantrips never deplete
 
                 // Get the preparation mode from the dataset (set by decorateCellElement)
-                // Innate/at-will/pact spells don't use spell slots, so skip them
+                // Innate/at-will/pact/own-uses spells don't use spell slots, so skip them
                 const preparationMode = cell.element.dataset?.preparationMode || 'spell';
-                if (preparationMode !== 'spell') {
-                    // Non-slot spells (innate, atwill, pact, etc.) - their depletion
-                    // is handled by their own uses, not by spell slot changes
+                const hasOwnUses = cell.data?.uses?.max > 0;
+                if (preparationMode !== 'spell' || hasOwnUses) {
+                    // Non-slot / own-uses spells - depletion is handled by their uses
                     continue;
                 }
 
@@ -1030,7 +1060,7 @@ function patchAbilityTemplatePreview(BG3HUD_API) {
     // Check if AbilityTemplate exists (dnd5e scope)
     const dnd5eCanvas = game.dnd5e?.canvas;
     if (!dnd5eCanvas?.AbilityTemplate) {
-        console.warn('[bg3-hud-dnd5e] AbilityTemplate not found, skipping range indicator patch');
+        log.warn('AbilityTemplate not found, skipping range indicator patch');
         return;
     }
 
@@ -1065,7 +1095,7 @@ function patchAbilityTemplatePreview(BG3HUD_API) {
                 // This handles "Self" range spells (cones/cubes) correctly (range=0 -> no ring)
                 BG3HUD_API.showRangeIndicator({ token, item });
             } catch (e) {
-                console.error('[bg3-hud-dnd5e] Error showing range indicator:', e);
+                log.error('Error showing range indicator:', e);
             }
         }
 
@@ -1078,5 +1108,5 @@ function patchAbilityTemplatePreview(BG3HUD_API) {
         }
     };
 
-    console.info('[bg3-hud-dnd5e] Patched AbilityTemplate.drawPreview for range indicators');
+    log.info('Patched AbilityTemplate.drawPreview for range indicators');
 }

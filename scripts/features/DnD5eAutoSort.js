@@ -1,4 +1,7 @@
 import { AutoSortFramework } from '/modules/bg3-hud-core/scripts/features/AutoSortFramework.js';
+import { createLogger } from '/modules/bg3-hud-core/scripts/utils/logger.js';
+
+const log = createLogger('bg3-hud-dnd5e');
 
 /**
  * D&D 5e Auto Sort Implementation
@@ -35,7 +38,7 @@ export class DnD5eAutoSort extends AutoSortFramework {
                     };
                 }
             } catch (error) {
-                console.warn(`[bg3-hud-dnd5e] Failed to fetch item data for ${item.uuid}:`, error);
+                log.warn(`Failed to fetch item data for ${item.uuid}:`, error);
                 item.sortData = {
                     name: item.name || '',
                     spellLevel: 99,

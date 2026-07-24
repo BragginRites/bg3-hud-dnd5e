@@ -56,24 +56,3 @@ export function normalizeApothecarySlots(actor) {
         max: data.max
     };
 }
-
-/**
- * Check if a spell uses apothecary slots
- * @param {Item5e} spell - The D&D 5e spell item
- * @returns {boolean} True if spell uses apothecary preparation mode
- */
-export function isApothecarySpell(spell) {
-    if (spell?.type !== 'spell') return false;
-
-    const method = spell.system?.method ?? spell.system?.preparation?.mode;
-    return method === 'apothecary';
-}
-
-/**
- * Check if actor has any apothecary magic
- * @param {Actor5e} actor - The D&D 5e actor
- * @returns {boolean} True if actor has apothecary spell slots
- */
-export function hasApothecaryMagic(actor) {
-    return detectApothecaryMagic(actor) !== null;
-}
