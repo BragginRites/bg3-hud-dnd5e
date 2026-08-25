@@ -326,7 +326,8 @@ export function registerSettings() {
     default: false
   });
 
-  migrateLegacyBlockCPRActionsSetting();
+  // World settings cannot be written during init; migrate after ready.
+  Hooks.once('ready', () => migrateLegacyBlockCPRActionsSetting());
 
   // Midi-QoL advantage/disadvantage buttons setting
   game.settings.register(MODULE_ID, 'addAdvBtnsMidiQoL', {

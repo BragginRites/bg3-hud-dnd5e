@@ -104,11 +104,16 @@ Hooks.on('bg3HudReady', async (BG3HUD_API) => {
     // Register D&D 5e info container (abilities, skills, saves)
     BG3HUD_API.registerInfoContainer(DnD5eInfoContainer);
 
-    // Register D&D 5e situational bonuses container (midi-qol integration)
-    BG3HUD_API.registerContainer('situationalBonuses', DnD5eAdvContainer);
-
-    // Register D&D 5e CPR Generic Actions container
-    BG3HUD_API.registerContainer('cprGenericActions', DnD5eCPRGenericActionsContainer);
+    // Optional left-rail containers (core lays out by region/order; ids stay adapter-owned)
+    // CPR sits left of ADV (lower order renders first in the left region)
+    BG3HUD_API.registerContainer('cprGenericActions', DnD5eCPRGenericActionsContainer, {
+        region: 'left',
+        order: 10
+    });
+    BG3HUD_API.registerContainer('situationalBonuses', DnD5eAdvContainer, {
+        region: 'left',
+        order: 20
+    });
 
     // Create and register the adapter instance
     const adapter = new DnD5eAdapter();
@@ -243,6 +248,52 @@ class DnD5eAdapter {
     }
 
     /**
+     * PC chrome / auto-populate gate for core.
+     * @param {Actor} actor
+     * @returns {boolean}
+     */
+    isPlayerCharacter(actor) {
+        if (!actor) return false;
+        return actor.type === 'character' || !!actor.hasPlayerOwner;
+    }
+
+    /**
+     * Map updateActor changes to core HUD refresh actions.
+     * Owns dnd5e paths such as system.spells.
+     * @param {Object} changes
+     * @returns {Object}
+     */
+    resolveActorUpdatePlan(changes) {
+        const hpChanged = changes?.system?.attributes?.hp !== undefined;
+        const deathChanged = changes?.system?.attributes?.death !== undefined;
+        if (hpChanged || deathChanged) {
+            return { health: true, stop: true };
+        }
+
+        if (changes?.system?.spells !== undefined) {
+            return { resources: true, depletion: true, stop: true };
+        }
+
+        if (changes?.items !== undefined) {
+            return { items: true, stop: true };
+        }
+
+        if (changes?.system?.resources !== undefined) {
+            return { resources: true, attributes: true, depletion: true, stop: true };
+        }
+
+        if (changes?.system?.abilities !== undefined || changes?.system?.skills !== undefined) {
+            return { abilities: true, stop: true };
+        }
+
+        const plan = { lateDepletion: true };
+        if (changes?.system?.attributes !== undefined) {
+            plan.attributes = true;
+        }
+        return plan;
+    }
+
+    /**
      * Get default portrait data configuration for D&D 5e
      * Called by core when user hasn't configured portrait data yet
      * @returns {Array<Object>} Default slot configurations
@@ -265,20 +316,20 @@ class DnD5eAdapter {
      */
     async onCellClick(cell, event) {
         const data = cell.data;
-        if (!data) return;
+        if (!data?.uuid) return;
 
         log.debug('Cell clicked:', data);
 
-        // Handle Activity type
+        // Canonical Activity cells
         if (data.type === 'Activity') {
             await this._useActivity(data.uuid, event);
             return;
         }
 
-        // Handle Item type - Macros are handled by core
-        if (data.type === 'Item') {
-            await this._useItem(data.uuid, event);
-        }
+        // Canonical Item cells, plus legacy persisted system types
+        // (older saves stored type: 'spell' / 'feat' / 'weapon' instead of 'Item').
+        // Macros are handled by core before this adapter method runs.
+        await this._useItem(data.uuid, event);
     }
 
     /**
@@ -311,11 +362,18 @@ class DnD5eAdapter {
             return;
         }
 
+        // Hydration can leave Activity UUIDs tagged as type 'Item'; route correctly.
+        if (resolved.constructor?.metadata?.name === 'Activity') {
+            await this._useActivity(uuid, event);
+            return;
+        }
+
         // If this is an embedded item (already on the actor), use it directly.
         // If it's from a compendium, we need to create a real embedded item so midi-qol can find it.
         const isEmbedded = !!resolved.parent;
         const actor =
-            resolved.parent ??
+            resolved.actor ??
+            (resolved.parent?.documentName === 'Actor' ? resolved.parent : null) ??
             ui.BG3HUD_APP?.currentActor ??
             canvas?.tokens?.controlled?.[0]?.actor ??
             null;
@@ -689,6 +747,40 @@ class DnD5eAdapter {
     }
 
     /**
+     * D&D 5e spell preparation / casting-mode membership for the hotbar.
+     * Called by core ItemUpdateManager on item updates (no system logic in core).
+     *
+     * Modern dnd5e: `system.method` is `"spell"` for prepared casters (not `"prepared"`),
+     * and `system.prepared` is numeric (0 unprepared, 1 prepared, 2 always).
+     *
+     * @param {Item} item
+     * @param {Actor} _actor
+     * @returns {'add'|'remove'|null}
+     */
+    resolveHotbarMembershipOnItemUpdate(item, _actor) {
+        if (!item || item.type !== 'spell') return null;
+
+        const method = item.system?.method ?? item.system?.preparation?.mode ?? '';
+        // Numeric in dnd5e v4+; boolean possible on legacy preparation.prepared
+        const preparedRaw = item.system?.prepared ?? item.system?.preparation?.prepared;
+        const preparedValue = Number(preparedRaw) || 0;
+        const isPrepared = preparedValue > 0;
+
+        // Always-prepared (prepared === 2) or casting methods that ignore the checkbox
+        const alwaysEligible = preparedValue >= 2
+            || ['pact', 'apothecary', 'atwill', 'innate', 'ritual', 'always'].includes(method);
+        if (alwaysEligible) return 'add';
+
+        // Prepared casters: modern method is "spell"; legacy prep mode was "prepared"
+        const isPreparedMethod = method === 'spell' || method === 'prepared';
+        if (isPreparedMethod) {
+            return isPrepared ? 'add' : 'remove';
+        }
+
+        return null;
+    }
+
+    /**
      * Check if an item is a container (bag, pouch, box, etc.)
      * Delegates to DnD5eContainerPopover module
      * @param {Object} cellData - The cell's data object
@@ -902,11 +994,13 @@ class DnD5eAdapter {
      * Update cell depletion states based on actor changes
      * Called by core's UpdateCoordinator on any actor update
      * @param {Actor} actor - The actor that changed
-     * @param {Object} changes - The changes object from updateActor hook
+     * @param {Object} [changes] - The changes object from updateActor hook
+     * @param {boolean} [changes._force] - Recompute even when spell slots did not change
+     *   (e.g. after a hotbar grid rebuild that reloads stale persisted depleted flags)
      */
-    updateCellDepletionStates(actor, changes) {
-        // Only process if spell slots actually changed
-        if (changes?.system?.spells === undefined) return;
+    updateCellDepletionStates(actor, changes = {}) {
+        // Only process if spell slots actually changed, or a forced refresh was requested
+        if (!changes?._force && changes?.system?.spells === undefined) return;
 
         const spells = actor.system?.spells;
         if (!spells) return;

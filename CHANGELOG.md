@@ -1,26 +1,28 @@
-## [0.6.0] - 2026-07-24
+## [0.6.0] - 2026-08-25
 
 Requires **bg3-hud-core 0.6.0**.
 
-Mostly a housekeeping release, plus a few changes you might notice.
+Companion update for D&D 5e: player Display settings, rest buttons, targeting fixes, and hotbar reliability with modern D&D 5e spell prep.
+
+### Added
+- **Short Rest / Long Rest buttons**: Rest is split into two buttons again (campfire / tent), matching the older hotbar. The choose-rest dialog is still available elsewhere, but these buttons go straight to short or long rest.
 
 ### Fixed
-- **Players can open the Display menu**: The Display settings menu was locked to GMs, so players couldn't set their own preferences (item names, item uses, health overlay, portrait source, HP controls). It's now available to everyone, and each player's choices apply only to their own view.
-- **Invalid-target messages**: When the target selector rejected a target (no actor, not visible, must be an enemy/ally, etc.), it showed a raw text code instead of the proper message. These now read correctly.
-
-### Changed
-- **Hide Death Saves now builds real suspense**: With this GM setting on, players see only the skull (roll button) and their death save rolls go privately to the GM, while the GM keeps seeing the success/failure pips. Previously it hid the pips from the GM too. The setting is GM-only and no longer shows in a player's Display menu.
-- **Quieter console**: Routine console messages are now hidden unless you turn on the new Debug Logging setting in the Core module. Warnings and errors still show.
-- **Under-the-hood cleanup**: Removed unused code (including a leftover CPR actions button and an old compatibility helper) and tidied duplicated logic. No change to how the HUD works.
-
-### Changed
-- **Short Rest / Long Rest buttons**: Rest is split into two buttons again (campfire / tent), matching the legacy hotbar. The choose-rest dialog is kept but no longer opened from these buttons.
-
-### Fixed
-- **Starry Form / multi-activity self use**: Target selector no longer pre-runs for multi-activity items that include self-consume activities, which was blocking resource consumption.
-- **Innate / own-uses spells grayed out**: Spells with their own limited uses are no longer treated as depleted just because the actor has no spell slots.
-- **Activity targeting**: Non-self activities on the hotbar now use the target selector when appropriate.
+- **Players can open the Display menu**: Players can set their own Display preferences (item names, uses, health overlay, portrait source, HP controls). Each player's choices apply only to their view.
+- **Spells already on the bar**: Spells that were already placed before this update work when you click them again. You should not need to clear and refill the hotbar.
+- **Prepare / unprepare**: Preparing a spell adds it to the bar; unpreparing removes it. Works with the current D&D 5e prepared-spell rules.
+- **Innate / limited-use spells**: Spells with their own uses are no longer grayed out just because you have no spell slots left.
+- **Starry Form / multi-activity self use**: Target selector no longer blocks resource consumption on multi-activity items that include self-consume activities.
+- **Activity targeting**: Non-self activities on the hotbar ask for targets when they should.
+- **Invalid-target messages**: Rejected targets show a clear message instead of a raw code.
+- **Startup settings migration**: An older CPR settings migration no longer errors when the world is still loading.
 - **pt-BR**: Inspiration strings and Midi-QoL setting copy updates (thanks Kharmans).
+
+### Changed
+- **Hide Death Saves builds suspense**: With this GM setting on, players see the skull and their death-save rolls go privately to the GM, while the GM still sees the success/failure pips. The setting is GM-only and no longer appears in a player's Display menu.
+- **Advantage and CPR rails**: Advantage buttons and CPR actions sit in their own side panels in a consistent order (CPR beside Advantage).
+- **Quieter console**: Routine messages stay hidden unless Debug Logging is on in Core.
+- **Under-the-hood cleanup**: D&D-specific hotbar rules (spell prep, slot updates, player-character detection) live in this module so other systems are not affected.
 
 
 ## [0.4.1] - 2026-07-13
