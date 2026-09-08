@@ -5,7 +5,8 @@
 
 import { createDnD5ePortraitContainer } from './components/containers/DnD5ePortraitContainer.js';
 import { createDnD5ePassivesContainer } from './components/containers/DnD5ePassivesContainer.js';
-import { DnD5eActionButtonsContainer } from './components/containers/DnD5eActionButtonsContainer.js';
+import { getDnd5eRests } from './components/containers/DnD5eActionButtonsContainer.js';
+import { ActiveEffectsContainer } from '/modules/bg3-hud-core/scripts/components/containers/ActiveEffectsContainer.js';
 import { DnD5eFilterContainer } from './components/containers/DnD5eFilterContainer.js';
 import { createDnD5eWeaponSetContainer } from './components/containers/DnD5eWeaponSetContainer.js';
 import { DnD5eInfoContainer } from './components/containers/DnD5eInfoContainer.js';
@@ -86,23 +87,15 @@ Hooks.on('bg3HudReady', async (BG3HUD_API) => {
     // Create the weapon set container class (extends core's WeaponSetContainer)
     const DnD5eWeaponSetContainer = await createDnD5eWeaponSetContainer();
 
-    // Register D&D 5e portrait container (includes health display)
-    BG3HUD_API.registerPortraitContainer(DnD5ePortraitContainer);
-
-    // Register D&D 5e passives container (feat selection)
-    BG3HUD_API.registerPassivesContainer(DnD5ePassivesContainer);
-
-    // Register D&D 5e weapon set container (two-handed weapon support)
-    BG3HUD_API.registerWeaponSetContainer(DnD5eWeaponSetContainer);
-
-    // Register D&D 5e action buttons container (rest/turn buttons)
-    BG3HUD_API.registerActionButtonsContainer(DnD5eActionButtonsContainer);
-
-    // Register D&D 5e filter container (action types, spell slots)
-    BG3HUD_API.registerFilterContainer(DnD5eFilterContainer);
-
-    // Register D&D 5e info container (abilities, skills, saves)
-    BG3HUD_API.registerInfoContainer(DnD5eInfoContainer);
+    BG3HUD_API.registerNamedHudParts({
+        portrait: DnD5ePortraitContainer,
+        passives: DnD5ePassivesContainer,
+        weaponSet: DnD5eWeaponSetContainer,
+        filter: DnD5eFilterContainer,
+        characterInfo: DnD5eInfoContainer,
+        activeEffects: ActiveEffectsContainer,
+        rest: getDnd5eRests
+    });
 
     // Optional left-rail containers (core lays out by region/order; ids stay adapter-owned)
     // CPR sits left of ADV (lower order renders first in the left region)
