@@ -1,3 +1,8 @@
+## [Unreleased]
+
+### Changed
+- Spell slots, Passives, token image, and ADV now tell Core what changed instead of walking the HUD tree.
+
 ## [0.6.0] - 2026-08-25
 
 Requires **bg3-hud-core 0.6.0**.

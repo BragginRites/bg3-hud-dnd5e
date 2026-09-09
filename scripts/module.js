@@ -25,6 +25,7 @@ import {
     shouldExcludeGenericActionFromHotbarAutoAdd
 } from './constants/cprBlockedHotbarActions.js';
 import { createLogger } from '/modules/bg3-hud-core/scripts/utils/logger.js';
+import { resolveDnd5eNotice } from './notice/resolveNotice.js';
 
 const log = createLogger('bg3-hud-dnd5e');
 
@@ -186,45 +187,8 @@ class DnD5eAdapter {
         log.info('DnD5eAdapter created with autoSort, autoPopulate, cprAutoPopulate, and targetingRules');
     }
 
-    /**
-     * React to HUD flag deltas from this adapter module on the actor (`flags[MODULE_ID]`).
-     * @param {Record<string, unknown>} adapterFlags
-     * @param {*} hotbarApp
-     * @returns {Promise<boolean>}
-     */
-    async onAdapterFlagsChanged(adapterFlags, hotbarApp) {
-        let handled = false;
-
-        if (Object.prototype.hasOwnProperty.call(adapterFlags, 'selectedPassives')) {
-            if (hotbarApp.components?.hotbar?.passivesContainer) {
-                await hotbarApp.components.hotbar.passivesContainer.render();
-                handled = true;
-            }
-        }
-
-        if (Object.prototype.hasOwnProperty.call(adapterFlags, 'useTokenImage') ||
-            Object.prototype.hasOwnProperty.call(adapterFlags, 'scaleWithToken')) {
-            const portraitContainer = hotbarApp.components?.portrait;
-            if (portraitContainer) {
-                await portraitContainer.render();
-                handled = true;
-            }
-        }
-
-        const advStateKeys = ['advState', '-=advState'];
-        const advOnceKeys = ['advOnce', '-=advOnce'];
-        const advStateChanged = advStateKeys.some((key) => Object.prototype.hasOwnProperty.call(adapterFlags, key));
-        const advOnceChanged = advOnceKeys.some((key) => Object.prototype.hasOwnProperty.call(adapterFlags, key));
-
-        if (advStateChanged || advOnceChanged) {
-            const situationalBonusesContainer = hotbarApp.components?.situationalBonuses;
-            if (situationalBonusesContainer && typeof situationalBonusesContainer.updateButtons === 'function') {
-                situationalBonusesContainer.updateButtons();
-                handled = true;
-            }
-        }
-
-        return handled;
+    resolveNotice(changes, actor) {
+        return resolveDnd5eNotice(changes, actor);
     }
 
     /**
@@ -248,42 +212,6 @@ class DnD5eAdapter {
     isPlayerCharacter(actor) {
         if (!actor) return false;
         return actor.type === 'character' || !!actor.hasPlayerOwner;
-    }
-
-    /**
-     * Map updateActor changes to core HUD refresh actions.
-     * Owns dnd5e paths such as system.spells.
-     * @param {Object} changes
-     * @returns {Object}
-     */
-    resolveActorUpdatePlan(changes) {
-        const hpChanged = changes?.system?.attributes?.hp !== undefined;
-        const deathChanged = changes?.system?.attributes?.death !== undefined;
-        if (hpChanged || deathChanged) {
-            return { health: true, stop: true };
-        }
-
-        if (changes?.system?.spells !== undefined) {
-            return { resources: true, depletion: true, stop: true };
-        }
-
-        if (changes?.items !== undefined) {
-            return { items: true, stop: true };
-        }
-
-        if (changes?.system?.resources !== undefined) {
-            return { resources: true, attributes: true, depletion: true, stop: true };
-        }
-
-        if (changes?.system?.abilities !== undefined || changes?.system?.skills !== undefined) {
-            return { abilities: true, stop: true };
-        }
-
-        const plan = { lateDepletion: true };
-        if (changes?.system?.attributes !== undefined) {
-            plan.attributes = true;
-        }
-        return plan;
     }
 
     /**
@@ -983,96 +911,6 @@ class DnD5eAdapter {
         return cellData;
     }
 
-    /**
-     * Update cell depletion states based on actor changes
-     * Called by core's UpdateCoordinator on any actor update
-     * @param {Actor} actor - The actor that changed
-     * @param {Object} [changes] - The changes object from updateActor hook
-     * @param {boolean} [changes._force] - Recompute even when spell slots did not change
-     *   (e.g. after a hotbar grid rebuild that reloads stale persisted depleted flags)
-     */
-    updateCellDepletionStates(actor, changes = {}) {
-        // Only process if spell slots actually changed, or a forced refresh was requested
-        if (!changes?._force && changes?.system?.spells === undefined) return;
-
-        const spells = actor.system?.spells;
-        if (!spells) return;
-
-        const hotbarApp = ui.BG3HUD_APP;
-        if (!hotbarApp?.components) return;
-
-        // Use requestAnimationFrame to avoid flashing by syncing with render cycle
-        requestAnimationFrame(() => {
-            // Collect spell cells from hotbar only (skip quickAccess to avoid CPR issues)
-            const allCells = [];
-            for (const containerKey of ['hotbar', 'weaponSets']) {
-                const container = hotbarApp.components[containerKey];
-                if (container?.gridContainers) {
-                    for (const grid of container.gridContainers) {
-                        if (grid?.cells) {
-                            allCells.push(...grid.cells);
-                        }
-                    }
-                }
-            }
-
-            for (const cell of allCells) {
-                // Defensive: ensure cell, data, and element exist and are stable
-                if (!cell?.data?.uuid) continue;
-                if (!cell?.element) continue;
-                if (!cell.element.isConnected) continue; // Element not in DOM
-
-                // Only process spell items
-                const itemType = cell.element.dataset?.itemType;
-                if (itemType !== 'spell') continue;
-
-                const level = parseInt(cell.element.dataset?.level) || 0;
-                if (level === 0) continue; // Cantrips never deplete
-
-                // Get the preparation mode from the dataset (set by decorateCellElement)
-                // Innate/at-will/pact/own-uses spells don't use spell slots, so skip them
-                const preparationMode = cell.element.dataset?.preparationMode || 'spell';
-                const hasOwnUses = cell.data?.uses?.max > 0;
-                if (preparationMode !== 'spell' || hasOwnUses) {
-                    // Non-slot / own-uses spells - depletion is handled by their uses
-                    continue;
-                }
-
-                // Regular learned spells - check spell slots
-                let canCast = false;
-                for (let l = level; l <= 9; l++) {
-                    const slot = spells[`spell${l}`];
-                    if (slot?.value > 0) {
-                        canCast = true;
-                        break;
-                    }
-                }
-                // Also check pact slots
-                if (!canCast && spells.pact?.value > 0 && spells.pact?.level >= level) {
-                    canCast = true;
-                }
-                // Also check apothecary slots (SCGD compatibility)
-                if (!canCast && spells.apothecary?.value > 0 && (spells.apothecary?.level ?? 1) >= level) {
-                    canCast = true;
-                }
-
-                // Update data for persistence
-                cell.data.depleted = !canCast;
-
-                // Update DOM
-                const img = cell.element.querySelector('.hotbar-item');
-                if (!canCast) {
-                    cell.element.classList.add('depleted');
-                    cell.element.setAttribute('data-depleted', 'true');
-                    if (img) img.classList.add('depleted');
-                } else {
-                    cell.element.classList.remove('depleted');
-                    cell.element.removeAttribute('data-depleted');
-                    if (img) img.classList.remove('depleted');
-                }
-            }
-        });
-    }
 }
 
 /**
