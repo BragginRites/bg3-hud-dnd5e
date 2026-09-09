@@ -191,6 +191,56 @@ class DnD5eAdapter {
         return resolveDnd5eNotice(changes, actor);
     }
 
+    isHeldItem(cell) {
+        if (!cell || cell.isTwoHandedDuplicate) return false;
+        const item = this._documentFromCell(cell);
+        return this._isHeldDocument(item);
+    }
+
+    isTwoHanded(cell) {
+        if (!cell || cell.isTwoHandedDuplicate) return false;
+        if (cell.two) return true;
+        const item = this._documentFromCell(cell);
+        if (!item || item.type !== 'weapon') return false;
+        const properties = item.system?.properties;
+        if (properties instanceof Set) return properties.has('two');
+        if (Array.isArray(properties)) return properties.includes('two');
+        return properties?.two === true;
+    }
+
+    _documentFromCell(cell) {
+        if (cell.itemType) {
+            return {
+                type: cell.itemType,
+                system: {
+                    type: { value: cell.equipmentType || cell.consumableType },
+                    armor: { type: cell.armorType }
+                }
+            };
+        }
+        if (!cell.uuid || typeof fromUuidSync !== 'function') return null;
+        try {
+            return fromUuidSync(cell.uuid);
+        } catch {
+            return null;
+        }
+    }
+
+    _isHeldDocument(item) {
+        if (!item) return false;
+        if (item.type === 'weapon') return true;
+        if (item.type === 'equipment') {
+            const typeValue = item.system?.type?.value || item.system?.type;
+            const armorType = item.system?.armor?.type;
+            return typeValue === 'shield' || armorType === 'shield';
+        }
+        if (item.type === 'consumable') {
+            const t = item.system?.type?.value || item.system?.type;
+            return t === 'wand';
+        }
+        return false;
+    }
+
     /**
      * Check if an actor is compatible with this adapter
      * @param {Actor} actor - The actor to check
@@ -829,8 +879,21 @@ class DnD5eAdapter {
             uuid: item.uuid,
             name: item.name,
             img: item.img,
-            type: 'Item'
+            type: 'Item',
+            itemType: item.type
         };
+
+        if (item.type === 'weapon') {
+            const properties = item.system?.properties;
+            if (properties instanceof Set) cellData.two = properties.has('two');
+            else if (Array.isArray(properties)) cellData.two = properties.includes('two');
+            else cellData.two = properties?.two === true;
+        } else if (item.type === 'equipment') {
+            cellData.equipmentType = item.system?.type?.value || item.system?.type;
+            cellData.armorType = item.system?.armor?.type;
+        } else if (item.type === 'consumable') {
+            cellData.consumableType = item.system?.type?.value || item.system?.type;
+        }
 
         // Extract quantity (D&D 5e stores this in system.quantity)
         if (item.system?.quantity) {

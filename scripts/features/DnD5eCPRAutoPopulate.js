@@ -5,6 +5,7 @@
 
 import { createLogger } from '/modules/bg3-hud-core/scripts/utils/logger.js';
 import { getCPRConfig } from '../constants/cprBlockedHotbarActions.js';
+import { alreadyOnUseGrids, occupy, parkMapFromState, writeParkMap } from '/modules/bg3-hud-core/scripts/occupancy/occupancy.js';
 
 const log = createLogger('bg3-hud-dnd5e');
 
@@ -155,8 +156,15 @@ export class DnD5eCPRAutoPopulate {
                 return;
             }
 
+            const useMap = parkMapFromState(state);
+            const freshActions = embeddedActions.filter((action) => !alreadyOnUseGrids(useMap, { uuid: action.uuid }));
+            if (freshActions.length === 0) {
+                log.debug('CPR AutoPopulate: Skipping - actions already on Hotbar or Quick Access');
+                return;
+            }
+
             // Sort alphabetically by name
-            embeddedActions.sort((a, b) => a.name.localeCompare(b.name));
+            freshActions.sort((a, b) => a.name.localeCompare(b.name));
 
             // Ensure quickAccess structure exists
             if (!state.quickAccess || !Array.isArray(state.quickAccess.grids)) {
@@ -168,27 +176,38 @@ export class DnD5eCPRAutoPopulate {
                 grid.items = {};
             }
 
-            // Populate grid cells with EMBEDDED item UUIDs (up to 6, filling left to right, top to bottom)
-            // Slot keys use format "col-row" (e.g., "0-0", "1-0", "2-0", "0-1", "1-1", "2-1")
-            const maxActions = Math.min(embeddedActions.length, 6);
+            const cols = grid.cols || 3;
+            const rows = grid.rows || 2;
+            let map = parkMapFromState(state);
+            let actionIndex = 0;
             const populatedSlots = [];
-            for (let i = 0; i < maxActions; i++) {
-                const row = Math.floor(i / grid.cols);
-                const col = i % grid.cols;
-                const slotKey = `${col}-${row}`; // Format: col-row (not row-col!)
-
-                // Store cell data with embedded item UUID (not compendium UUID)
-                grid.items[slotKey] = {
-                    uuid: embeddedActions[i].uuid,
-                    type: 'Item',
-                };
-                populatedSlots.push(slotKey);
+            for (let r = 0; r < rows && actionIndex < freshActions.length; r++) {
+                for (let c = 0; c < cols && actionIndex < freshActions.length; c++) {
+                    const slotKey = `${c}-${r}`;
+                    const cell = { uuid: freshActions[actionIndex].uuid, type: 'Item' };
+                    const result = occupy(map, {
+                        container: 'quickAccess',
+                        containerIndex: 0,
+                        slotKey
+                    }, cell);
+                    if (!result.ok) continue;
+                    map = result.map;
+                    populatedSlots.push(slotKey);
+                    actionIndex++;
+                }
             }
+
+            if (populatedSlots.length === 0) {
+                log.debug('CPR AutoPopulate: No empty Quick Access Slots to occupy');
+                return;
+            }
+
+            writeParkMap(state, map);
 
             // Save updated state
             await tempPersistence.saveState(state);
 
-            log.debug(`Populated quickAccess with ${maxActions} CPR actions (embedded) in slots: ${populatedSlots.join(', ')}`);
+            log.debug(`Populated quickAccess with ${populatedSlots.length} CPR actions (embedded) in slots: ${populatedSlots.join(', ')}`);
 
             // Delay before refreshing HUD (50ms after quickAccess population)
             await new Promise(resolve => setTimeout(resolve, 50));
