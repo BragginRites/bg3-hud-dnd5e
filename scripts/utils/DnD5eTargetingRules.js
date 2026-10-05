@@ -24,9 +24,8 @@ export function needsTargeting({ item, activity = null }) {
         return false;
     }
 
-    // Check for AOE template spells that target points - these should use Foundry's template system
     if (_isAOETemplateSpell(item)) {
-        return false;
+        return true;
     }
 
     // Prefer activity-level targeting when the item has activities.
@@ -38,6 +37,7 @@ export function needsTargeting({ item, activity = null }) {
     if (item.system?.activities) {
         const activities = Array.from(item.system.activities.values?.() ?? []);
         if (activities.length > 0) {
+            if (activities.every((act) => act?.target?.template?.type)) return true;
             const relevant = activities.filter((act) => !act?.target?.template?.type);
             if (relevant.length === 0) return false;
             return relevant.every((act) => _activityNeedsTargeting(act));
@@ -87,8 +87,7 @@ export function needsTargeting({ item, activity = null }) {
 function _activityNeedsTargeting(act) {
     if (!act) return false;
 
-    // AoE templates use Foundry's template workflow
-    if (act.target?.template?.type) return false;
+    if (act.target?.template?.type) return true;
 
     const targetType = act.target?.type || act.target?.affects?.type;
     if (targetType === 'self' || targetType === 'none') return false;

@@ -60,12 +60,18 @@ export async function createDnD5ePassivesContainer() {
          * @returns {Set<string>} Set of item UUIDs that should be displayed
          */
         getSelectedPassives() {
+            if (!this.actor) return new Set();
+
             const saved = this.actor.getFlag(MODULE_ID, 'selectedPassives');
-            if (saved && Array.isArray(saved)) {
+            if (Array.isArray(saved)) {
                 return new Set(saved);
             }
 
-            // Default: show nothing (user must configure)
+            // NPCs, linked or unlinked, show every passive until someone saves a selection.
+            if (this.actor.type === 'npc') {
+                return new Set(this.getPassiveItems().map(item => item.uuid));
+            }
+
             return new Set();
         }
 

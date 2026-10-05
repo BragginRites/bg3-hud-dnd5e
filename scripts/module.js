@@ -70,9 +70,6 @@ Hooks.on('bg3HudReady', async (BG3HUD_API) => {
         return array.includes(value) || array.some(item => String(item).includes(String(value)));
     });
 
-    // Patch AbilityTemplate for range indicators
-    patchAbilityTemplatePreview(BG3HUD_API);
-
     // Register Handlebars partials for tooltips
     const weaponBlockTemplate = await fetch('modules/bg3-hud-dnd5e/templates/tooltips/weapon-block.hbs').then(r => r.text());
     Handlebars.registerPartial('bg3-hud-dnd5e.weapon-block', weaponBlockTemplate);
@@ -162,6 +159,96 @@ Hooks.on('bg3HudReady', async (BG3HUD_API) => {
 
 
 });
+
+/**
+ * Collect activation types from a D&D 5e item's activities.
+ * @param {Item} item
+ * @returns {string[]}
+ */
+function collectActivityActionTypes(item) {
+    const actionTypes = new Set();
+    const activities = item?.system?.activities;
+    if (!activities) return [];
+
+    let activityList = [];
+    if (activities.contents) {
+        activityList = activities.contents;
+    } else if (typeof activities.values === 'function') {
+        activityList = Array.from(activities.values());
+    } else if (typeof activities === 'object') {
+        activityList = Object.values(activities);
+    }
+
+    for (const activity of activityList) {
+        if (activity?.activation?.type) {
+            actionTypes.add(activity.activation.type);
+        }
+    }
+    return Array.from(actionTypes);
+}
+
+/**
+ * Filter fields the HUD already knows after hydrate. Stored on cellData so
+ * decorate does not fromUuid every Slot on first paint.
+ * @param {Object} cellData
+ * @param {Item} item
+ */
+function attachFilterFields(cellData, item) {
+    if (!cellData || !item) return;
+    cellData.itemType = item.type;
+    if (item.type === 'spell') {
+        cellData.level = item.system?.level ?? 0;
+        cellData.preparationMode = item.system?.method ?? item.system?.preparation?.mode ?? '';
+    }
+    const actionTypes = collectActivityActionTypes(item);
+    if (actionTypes.length > 0) {
+        cellData.activityActionTypes = actionTypes.join(',');
+        cellData.actionType = actionTypes[0];
+    } else if (item.system?.activation?.type) {
+        cellData.actionType = item.system.activation.type;
+    }
+}
+
+/**
+ * Apply stored filter fields to a Slot element.
+ * @param {HTMLElement} cellElement
+ * @param {Object} cellData
+ * @returns {boolean} True when enough fields were present to skip a document lookup.
+ */
+function decorateElementFromCellData(cellElement, cellData) {
+    if (!cellData) return false;
+    let applied = false;
+    if (cellData.itemType) {
+        cellElement.dataset.itemType = cellData.itemType;
+        applied = true;
+    }
+    if (cellData.level != null && cellData.level !== '') {
+        cellElement.dataset.level = cellData.level;
+    }
+    if (cellData.preparationMode) {
+        cellElement.dataset.preparationMode = cellData.preparationMode;
+    }
+    if (cellData.activityActionTypes) {
+        cellElement.dataset.activityActionTypes = cellData.activityActionTypes;
+        applied = true;
+    }
+    if (cellData.actionType) {
+        cellElement.dataset.actionType = cellData.actionType;
+        applied = true;
+    }
+    return applied;
+}
+
+/**
+ * @param {HTMLElement} cellElement
+ * @param {Item} item
+ */
+function decorateElementFromItem(cellElement, item) {
+    if (!item) return;
+    const fields = {};
+    attachFilterFields(fields, item);
+    decorateElementFromCellData(cellElement, fields);
+}
 
 /**
  * D&D 5e Adapter Class
@@ -392,6 +479,7 @@ class DnD5eAdapter {
         // Check if item needs targeting and target selector is enabled
         const targetSelectorEnabled = game.settings.get('bg3-hud-core', 'enableTargetSelector');
         const needsTargeting = targetSelectorEnabled && this.targetingRules?.needsTargeting({ item: itemToUse });
+        let areaPlaced = false;
 
         if (needsTargeting) {
             // Get the source token
@@ -407,8 +495,7 @@ class DnD5eAdapter {
                         item: itemToUse
                     });
 
-                    // If user cancelled (empty array returned when cancelled), abort item use
-                    if (!targets || targets.length === 0) {
+                    if (!targets?.placed && (!targets || targets.length === 0)) {
                         log.debug('Target selection cancelled');
                         // Clean up temp item if we created one
                         if (createdItemId && actor.items.has(createdItemId)) {
@@ -418,6 +505,7 @@ class DnD5eAdapter {
                     }
 
                     log.debug('Targets selected:', targets.map(t => t.name).join(', '));
+                    areaPlaced = targets.placed === true;
                 } catch (error) {
                     log.error('Target selection error:', error);
                     // Clean up temp item if we created one
@@ -432,7 +520,11 @@ class DnD5eAdapter {
         // Use the item (D&D 5e v4+ uses .use() method)
         if (typeof itemToUse.use === 'function') {
             try {
-                await itemToUse.use({ event });
+                const config = { event };
+                if (areaPlaced) {
+                    config.create = { measuredTemplate: false };
+                }
+                await itemToUse.use(config);
             } finally {
                 // Clean up: delete the temporarily created item from the actor's inventory
                 // This runs even if item.use() throws, ensuring we don't leave orphan items
@@ -470,6 +562,8 @@ class DnD5eAdapter {
         const needsTargeting = targetSelectorEnabled
             && this.targetingRules?.needsTargeting({ item, activity });
 
+        let areaPlaced = false;
+
         if (needsTargeting && actor) {
             const sourceToken = actor.token?.object
                 ?? canvas?.tokens?.placeables?.find(t => t.actor?.id === actor.id)
@@ -481,10 +575,11 @@ class DnD5eAdapter {
                         item,
                         activity
                     });
-                    if (!targets || targets.length === 0) {
+                    if (!targets?.placed && (!targets || targets.length === 0)) {
                         log.debug('Activity target selection cancelled');
                         return;
                     }
+                    areaPlaced = targets.placed === true;
                 } catch (error) {
                     log.error('Activity target selection error:', error);
                     return;
@@ -494,7 +589,11 @@ class DnD5eAdapter {
 
         // Activities have their own use() method
         if (typeof activity.use === 'function') {
-            await activity.use({ event });
+            const config = { event };
+            if (areaPlaced) {
+                config.create = { measuredTemplate: false };
+            }
+            await activity.use(config);
         } else {
             ui.notifications.warn(game.i18n.localize(`${MODULE_ID}.Notifications.ActivityCannotBeUsed`));
         }
@@ -791,64 +890,30 @@ class DnD5eAdapter {
      * @param {Object} cellData - The cell's data object
      */
     async decorateCellElement(cellElement, cellData) {
-        if (!cellData || !cellData.uuid) return;
+        if (!cellData) return;
 
-        // Get the item from UUID
-        const item = await fromUuid(cellData.uuid);
+        if (decorateElementFromCellData(cellElement, cellData)) return;
+        if (!cellData.uuid) return;
+
+        let item = null;
+        if (typeof fromUuidSync === 'function') {
+            try {
+                item = fromUuidSync(cellData.uuid);
+            } catch {
+                item = null;
+            }
+        }
+        if (!item) {
+            try {
+                item = await fromUuid(cellData.uuid);
+            } catch {
+                return;
+            }
+        }
         if (!item) return;
 
-        // Add item type
-        cellElement.dataset.itemType = item.type;
-
-        // Add spell-specific attributes
-        if (item.type === 'spell') {
-            cellElement.dataset.level = item.system?.level ?? 0;
-            // D&D 5e v5.1+: use .method instead of deprecated .preparation.mode
-            cellElement.dataset.preparationMode = item.system?.method ?? item.system?.preparation?.mode ?? '';
-        }
-
-        // Extract action types from activities (D&D 5e v5+)
-        // This applies to ALL item types: spells, weapons, feats, etc.
-        const activities = item.system?.activities;
-        if (activities) {
-            const actionTypes = new Set();
-
-            // Activities is a Foundry Collection (Map-like), not a plain object
-            // We need to iterate using Collection methods or convert to array
-            let activityList = [];
-
-            // Check if it's a Collection with .contents property
-            if (activities.contents) {
-                activityList = activities.contents;
-            }
-            // Or if it has a values() method (Map-like)
-            else if (typeof activities.values === 'function') {
-                activityList = Array.from(activities.values());
-            }
-            // Fallback to Object.values for plain objects
-            else if (typeof activities === 'object') {
-                activityList = Object.values(activities);
-            }
-
-            for (const activity of activityList) {
-                if (activity?.activation?.type) {
-                    actionTypes.add(activity.activation.type);
-                }
-            }
-
-            // Store all action types as comma-separated list
-            if (actionTypes.size > 0) {
-                cellElement.dataset.activityActionTypes = Array.from(actionTypes).join(',');
-
-                // For backward compatibility, also set the first action type
-                cellElement.dataset.actionType = Array.from(actionTypes)[0];
-            }
-        }
-
-        // Fallback to legacy activation type if no activities found
-        if (!cellElement.dataset.actionType && item.system?.activation?.type) {
-            cellElement.dataset.actionType = item.system.activation.type;
-        }
+        const source = item.item ?? item;
+        decorateElementFromItem(cellElement, source);
     }
 
     /**
@@ -882,6 +947,7 @@ class DnD5eAdapter {
             type: 'Item',
             itemType: item.type
         };
+        attachFilterFields(cellData, item);
 
         if (item.type === 'weapon') {
             const properties = item.system?.properties;
@@ -1039,62 +1105,3 @@ Hooks.on('BG3HUD_TOKEN_CHANGED', async (token) => {
         await adapter.cprAutoPopulate.onTokenChange(token);
     }
 });
-
-/**
- * Patch D&D 5e AbilityTemplate to show range indicator during preview
- * @param {Object} BG3HUD_API - The BG3 HUD API
- */
-function patchAbilityTemplatePreview(BG3HUD_API) {
-    // Check if AbilityTemplate exists (dnd5e scope)
-    const dnd5eCanvas = game.dnd5e?.canvas;
-    if (!dnd5eCanvas?.AbilityTemplate) {
-        log.warn('AbilityTemplate not found, skipping range indicator patch');
-        return;
-    }
-
-    const AbilityTemplate = dnd5eCanvas.AbilityTemplate;
-
-    // Check if already patched to avoid double-patching if module reloads
-    if (AbilityTemplate.prototype._bg3hud_original_drawPreview) {
-        return;
-    }
-
-    const originalDrawPreview = AbilityTemplate.prototype.drawPreview;
-
-    // Store original for reference/debugging
-    AbilityTemplate.prototype._bg3hud_original_drawPreview = originalDrawPreview;
-
-    AbilityTemplate.prototype.drawPreview = async function (...args) {
-        // Show indicator if we have an item and a token
-        const item = this.item;
-        const actor = item?.actor;
-        let token = actor?.token?.object;
-
-        // If actor has no token on canvas, try to find one
-        if (!token && actor) {
-            token = canvas.tokens.placeables.find(t => t.actor?.id === actor.id);
-        }
-
-        // Only show if we found a token and item
-        if (token && item) {
-            try {
-                // Determine if we should show the indicator
-                // We use the API which internally checks if range > 0
-                // This handles "Self" range spells (cones/cubes) correctly (range=0 -> no ring)
-                BG3HUD_API.showRangeIndicator({ token, item });
-            } catch (e) {
-                log.error('Error showing range indicator:', e);
-            }
-        }
-
-        try {
-            // Call original method and await its result
-            return await originalDrawPreview.apply(this, args);
-        } finally {
-            // Always hide indicator when preview matches (resolve) or cancels (reject/resolve null)
-            BG3HUD_API.hideRangeIndicator();
-        }
-    };
-
-    log.info('Patched AbilityTemplate.drawPreview for range indicators');
-}
