@@ -1,6 +1,6 @@
-## [Unreleased]
+## [0.7.0] - 2026-10-05
 
-Requires the matching bg3-hud-core update.
+Requires **bg3-hud-core 0.7.0**.
 
 ### Changed
 - **During play**: Spell slots, passives, the portrait, and advantage update the part that changed. The bar does not rebuild. Spell slots update as soon as you spend one, without selecting another token ([#15](https://github.com/BragginRites/bg3-hud-dnd5e/issues/15)).
