@@ -1,7 +1,12 @@
 ## [Unreleased]
 
+Requires the matching bg3-hud-core update.
+
 ### Changed
-- Spell slots, Passives, token image, and ADV now tell Core what changed instead of walking the HUD tree.
+- **During play**: Spell slots, passives, the portrait, and advantage update the part that changed. The bar does not rebuild.
+- **Area spells**: With Target Select on, a blast places with one click. With it off, Foundry places the template as before.
+- **NPC passives**: An NPC shows every passive until you save a shorter list. Player characters still start with none until you pick.
+- **Weapons**: Weapon sets take what the creature is holding. Auto-fill will not pull an ability you already placed off the bar.
 
 ## [0.6.0] - 2026-08-25
 
