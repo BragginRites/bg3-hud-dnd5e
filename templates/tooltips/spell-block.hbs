@@ -1,0 +1,34 @@
+<ul class="bg3-tt-stats">
+    <li>
+        <strong>{{ localize "DND5E.SpellCastTime" }}:</strong>
+        <span class="bg3-tt-stat-value">
+            {{ labels.ritualActivation }}
+            {{#if activation.condition}}
+            <span class="bg3-tt-note">({{ activation.condition }})</span>
+            {{/if}}
+        </span>
+    </li>
+    <li>
+        <strong>{{ localize "DND5E.Range" }}:</strong>
+        <span class="bg3-tt-stat-value">{{ labels.range }}</span>
+    </li>
+    {{#if labels.target}}
+    <li>
+        <strong>{{ localize "DND5E.Target" }}:</strong>
+        <span class="bg3-tt-stat-value">{{ labels.target }}</span>
+    </li>
+    {{/if}}
+    <li>
+        <strong>{{ localize "DND5E.Components" }}:</strong>
+        <span class="bg3-tt-stat-value">
+            {{ labels.components.vsm }}
+            {{#if labels.materials}}
+            <span class="bg3-tt-note">({{ labels.materials }})</span>
+            {{/if}}
+        </span>
+    </li>
+    <li>
+        <strong>{{ localize "DND5E.Duration" }}:</strong>
+        <span class="bg3-tt-stat-value">{{ labels.concentrationDuration }}</span>
+    </li>
+</ul>

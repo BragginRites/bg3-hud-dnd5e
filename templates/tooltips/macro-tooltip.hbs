@@ -1,18 +1,17 @@
-<section class="content overrided-tooltip">
-    <section class="header">
-        <div class="top">
-            <img src="{{ img }}" alt="{{ name }}">
-            <div class="name name-stacked">
-                <span class="title">{{ name }}</span>
-                <span class="subtitle">{{{ subtitle }}}</span>
+<section class="bg3-tt-card">
+    <section class="bg3-tt-header">
+        <div class="bg3-tt-top">
+            <img class="bg3-tt-portrait" src="{{ img }}" alt="{{ name }}">
+            <div class="bg3-tt-name">
+                <span class="bg3-tt-title">{{ name }}</span>
+                <span class="bg3-tt-subtitle">{{{ subtitle }}}</span>
             </div>
         </div>
     </section>
     {{#if controlHints}}
-    <div class="control-hint lock-hint">
+    <div class="bg3-tt-hint">
         <img src="systems/dnd5e/icons/svg/mouse-middle.svg" alt="{{ localize "DND5E.Controls.MiddleClick" }}">
         <span>{{ localize "DND5E.Controls.LockHint" }}</span>
     </div>
     {{/if}}
 </section>
-

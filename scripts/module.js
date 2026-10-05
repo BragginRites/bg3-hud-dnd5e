@@ -73,6 +73,8 @@ Hooks.on('bg3HudReady', async (BG3HUD_API) => {
     // Register Handlebars partials for tooltips
     const weaponBlockTemplate = await fetch('modules/bg3-hud-dnd5e/templates/tooltips/weapon-block.hbs').then(r => r.text());
     Handlebars.registerPartial('bg3-hud-dnd5e.weapon-block', weaponBlockTemplate);
+    const spellBlockTemplate = await fetch('modules/bg3-hud-dnd5e/templates/tooltips/spell-block.hbs').then(r => r.text());
+    Handlebars.registerPartial('bg3-hud-dnd5e.spell-block', spellBlockTemplate);
 
     log.info('Registering D&D 5e components');
 
@@ -124,12 +126,6 @@ Hooks.on('bg3HudReady', async (BG3HUD_API) => {
     } else {
         BG3HUD_API.registerTooltipRenderer('dnd5e', renderDnD5eTooltip);
         log.info('Tooltip renderer registered');
-
-        // Align tooltip element ID for dnd5e tooltip styling while relying on our blocker to prevent system tooltips on UI
-        if (tooltipManager.tooltipElement) {
-            tooltipManager.tooltipElement.id = 'tooltip';
-            log.info('Tooltip ID set to #tooltip for dnd5e styling');
-        }
     }
 
     log.info('Registration complete');

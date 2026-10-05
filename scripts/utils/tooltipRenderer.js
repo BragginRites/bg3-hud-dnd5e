@@ -478,7 +478,7 @@ export async function renderDnD5eTooltip(data, options = {}) {
 
         return {
             content: html,
-            classes: ['dnd5e2', 'dnd5e-tooltip', 'item-tooltip'],
+            classes: [],
             direction: 'UP'
         };
     } catch (error) {

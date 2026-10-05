@@ -1,36 +1,35 @@
-<section class="content overrided-tooltip">
-    <section class="header">
+<section class="dnd5e2 bg3-tt-card">
+    <section class="bg3-tt-header">
         {{#if school}}
-        <div class="school">
+        <div class="bg3-tt-school">
             {{#with (lookup @root.config.spellSchools school) as |schoolConfig|}}
             <dnd5e-icon src="{{ schoolConfig.icon }}"></dnd5e-icon>
             {{/with}}
         </div>
         {{/if}}
-        <div class="top">
-            <img src="{{ img }}" alt="{{ name }}">
-            <div class="name name-stacked">
-                <span class="title">{{ name }}</span>
-                <span class="subtitle">{{{ subtitle }}}</span>
+        <div class="bg3-tt-top">
+            <img class="bg3-tt-portrait" src="{{ img }}" alt="{{ name }}">
+            <div class="bg3-tt-name">
+                <span class="bg3-tt-title">{{ name }}</span>
+                <span class="bg3-tt-subtitle">{{{ subtitle }}}</span>
             </div>
         </div>
-        <div class="bottom">
-            <div class="price">
+        <div class="bg3-tt-meta">
+            <div class="bg3-tt-price">
                 {{#if price}}
                 <i class="currency {{ price.denomination }}"></i>
                 <span>{{ dnd5e-numberFormat price.value }}</span>
                 {{/if}}
             </div>
-
-            <div class="charges">
+            <div class="bg3-tt-charges">
                 {{#if uses.max}}
-                <span class="value">{{ uses.value }}</span>
-                <span class="separator">&sol;</span>
-                <span class="max">{{ uses.max }}</span>
+                <span>{{ uses.value }}</span>
+                <span>&sol;</span>
+                <span>{{ uses.max }}</span>
                 <span>{{ localize "DND5E.Charges" }}</span>
                 {{/if}}
             </div>
-            <div class="weight">
+            <div class="bg3-tt-weight">
                 {{#if weight}}
                 <i class="fas fa-weight-hanging"></i>
                 <span>{{ weight.value }}</span>
@@ -39,29 +38,24 @@
         </div>
     </section>
     {{#if isSpell}}
-        {{> "dnd5e.spell-block" }}
+        {{> "bg3-hud-dnd5e.spell-block" }}
     {{/if}}
     {{#if (eq type "weapon")}}
         {{> "bg3-hud-dnd5e.weapon-block" }}
     {{/if}}
-    <section class="description">{{{ description.value }}}</section>
-    <ul class="pills">
+    <section class="bg3-tt-description">{{{ description.value }}}</section>
+    <ul class="bg3-tt-pills">
         {{#each tags}}
-        <li class="pill transparent">
-            <span class="label">{{ this }}</span>
-        </li>
+        <li class="bg3-tt-pill"><span>{{ this }}</span></li>
         {{/each}}
         {{#each properties}}
-        <li class="pill transparent">
-            <span class="label">{{ this }}</span>
-        </li>
+        <li class="bg3-tt-pill"><span>{{ this }}</span></li>
         {{/each}}
     </ul>
     {{#if controlHints}}
-    <div class="control-hint lock-hint">
+    <div class="bg3-tt-hint">
         <img src="systems/dnd5e/icons/svg/mouse-middle.svg" alt="{{ localize "DND5E.Controls.MiddleClick" }}">
         <span>{{ localize "DND5E.Controls.LockHint" }}</span>
     </div>
     {{/if}}
 </section>
-

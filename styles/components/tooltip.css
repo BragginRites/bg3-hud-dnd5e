@@ -1,0 +1,199 @@
+/**
+ * Item card inside the HUD tooltip.
+ * Classes are prefixed so other modules that style #tooltip, .dnd5e2, or .item-tooltip cannot restyle this card.
+ * dnd5e2 stays on the card only so D&D inline rolls and coin icons still match the system stylesheet.
+ */
+
+.bg3-tooltip:has(.bg3-tt-card) {
+    width: 320px;
+    min-width: 240px;
+    padding: 8px 10px;
+}
+
+.bg3-tooltip .bg3-tt-card {
+    display: block;
+    position: relative;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    text-align: start;
+}
+
+.bg3-tooltip .bg3-tt-header {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+}
+
+.bg3-tooltip .bg3-tt-school {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    --icon-fill: var(--dnd5e-color-gold, #c9a227);
+    --icon-size: 28px;
+}
+
+.bg3-tooltip .bg3-tt-top {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    text-align: center;
+}
+
+.bg3-tooltip .bg3-tt-portrait {
+    width: 64px;
+    height: 64px;
+    min-width: 64px;
+    min-height: 64px;
+    max-width: 64px;
+    max-height: 64px;
+    flex: 0 0 64px;
+    object-fit: cover;
+    object-position: top;
+    display: block;
+    margin: 0;
+    border: 2px solid var(--dnd5e-color-gold, #c9a227);
+    border-radius: 8px;
+    box-shadow: 0 0 4px var(--dnd5e-shadow-45, rgba(0, 0, 0, 0.45));
+    background: var(--dnd5e-background-alt-1, rgba(0, 0, 0, 0.25));
+}
+
+.bg3-tooltip .bg3-tt-name {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 0;
+    width: 100%;
+}
+
+.bg3-tooltip .bg3-tt-title {
+    font-weight: bold;
+    font-size: 16px;
+    line-height: 1.2;
+    color: var(--bg3-tooltip-text-color);
+}
+
+.bg3-tooltip .bg3-tt-subtitle {
+    font-size: 12px;
+    line-height: 1.2;
+    color: var(--bg3-tooltip-text-secondary-color);
+}
+
+.bg3-tooltip .bg3-tt-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--bg3-tooltip-text-secondary-color);
+}
+
+.bg3-tooltip .bg3-tt-price,
+.bg3-tooltip .bg3-tt-weight {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    width: 72px;
+}
+
+.bg3-tooltip .bg3-tt-weight {
+    justify-content: flex-end;
+}
+
+.bg3-tooltip .bg3-tt-charges {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 4px;
+}
+
+.bg3-tooltip .bg3-tt-price i.currency {
+    width: 1em;
+    height: 1em;
+    display: inline-block;
+    background: transparent no-repeat center / contain;
+}
+
+.bg3-tooltip .bg3-tt-price i.currency.pp { background-image: url("/systems/dnd5e/icons/currency/platinum.webp"); }
+.bg3-tooltip .bg3-tt-price i.currency.gp { background-image: url("/systems/dnd5e/icons/currency/gold.webp"); }
+.bg3-tooltip .bg3-tt-price i.currency.ep { background-image: url("/systems/dnd5e/icons/currency/electrum.webp"); }
+.bg3-tooltip .bg3-tt-price i.currency.sp { background-image: url("/systems/dnd5e/icons/currency/silver.webp"); }
+.bg3-tooltip .bg3-tt-price i.currency.cp { background-image: url("/systems/dnd5e/icons/currency/copper.webp"); }
+
+.bg3-tooltip .bg3-tt-stats {
+    list-style: none;
+    margin: 8px 0;
+    padding: 0;
+    text-align: left;
+    font-size: 12px;
+}
+
+.bg3-tooltip .bg3-tt-stats li {
+    display: block;
+    margin: 2px 0;
+}
+
+.bg3-tooltip .bg3-tt-note {
+    color: var(--bg3-tooltip-text-secondary-color);
+}
+
+.bg3-tooltip .bg3-tt-description {
+    margin: 8px 0;
+    max-height: 280px;
+    overflow: hidden;
+    text-align: left;
+    font-size: 13px;
+    line-height: 1.35;
+    color: var(--bg3-tooltip-text-color);
+}
+
+.bg3-tooltip.locked-tooltip .bg3-tt-description {
+    max-height: min(420px, 50vh);
+    overflow-y: auto;
+}
+
+.bg3-tooltip .bg3-tt-pills {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin: 8px 0 0;
+    padding: 0;
+}
+
+.bg3-tooltip .bg3-tt-pill {
+    margin: 0;
+    padding: 2px 6px;
+    border: 1px dotted var(--bg3-tooltip-border-color);
+    border-radius: 3px;
+    background: transparent;
+    font-size: 10px;
+    font-weight: bold;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--bg3-tooltip-text-secondary-color);
+}
+
+.bg3-tooltip .bg3-tt-hint {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 4px;
+    margin-top: 8px;
+    font-size: 10px;
+    color: var(--bg3-tooltip-text-secondary-color);
+}
+
+.bg3-tooltip .bg3-tt-hint img {
+    width: 1em;
+    height: 1em;
+    max-height: none;
+    border: none;
+    background: none;
+    box-shadow: none;
+    object-fit: contain;
+    opacity: 0.7;
+}

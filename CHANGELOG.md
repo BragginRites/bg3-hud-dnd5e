@@ -1,3 +1,10 @@
+## [0.7.1] - 2026-10-05
+
+Requires **bg3-hud-core 0.7.1**.
+
+### Fixed
+- **Item hover cards**: Hovering an item shows the same card as before, with the picture the same size as D&D's own tooltip. Other modules can no longer restyle that card.
+
 ## [0.7.0] - 2026-10-05
 
 Requires **bg3-hud-core 0.7.0**.

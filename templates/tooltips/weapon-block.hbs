@@ -1,15 +1,15 @@
 {{#if (or (not properties.length) (not (contains properties labels.activation)))}}
-<ul class="weapon-block unlist {{#if fullWidth}}full-width{{/if}}">
+<ul class="bg3-tt-stats">
     {{#unless (contains properties labels.activation)}}
     <li>
         <strong>{{ localize "DND5E.ItemActionType" }}:</strong>
-        <span class="value">{{ labels.activation }}</span>
+        <span class="bg3-tt-stat-value">{{ labels.activation }}</span>
     </li>
     {{/unless}}
     {{#if labels.attacks.length}}
     <li>
         <strong>{{ localize "DND5E.Attack" }}:</strong>
-        <span class="value">
+        <span class="bg3-tt-stat-value">
             {{#each labels.attacks as | attack |}}
                 {{ attack.toHit }}
                 {{#unless @last}}|{{/unless}}
@@ -21,7 +21,7 @@
     {{#unless (contains properties "Damage")}}
     <li>
         <strong>{{ localize "DND5E.Damage" }}:</strong>
-        <span class="value">
+        <span class="bg3-tt-stat-value">
             {{{enrichDamage.value}}}
         </span>
     </li>
@@ -30,17 +30,16 @@
     {{#if labels.reach}}
         <li>
             <strong>{{ localize "DND5E.Item.Property.Reach" }}:</strong>
-            <span class="value">{{ labels.reach }}</span>
+            <span class="bg3-tt-stat-value">{{ labels.reach }}</span>
         </li>
     {{/if}}
     {{#if labels.range}}
     {{#unless (contains properties labels.range)}}
         <li>
             <strong>{{ localize "DND5E.Range" }}:</strong>
-            <span class="value">{{ labels.range }}</span>
+            <span class="bg3-tt-stat-value">{{ labels.range }}</span>
         </li>
     {{/unless}}
     {{/if}}
 </ul>
 {{/if}}
-
