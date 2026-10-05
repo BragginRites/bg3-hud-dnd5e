@@ -206,6 +206,7 @@ export function isValidTargetType({ sourceToken, targetToken, requirements }) {
         return { valid: true, reason: null };
     }
 
+    // D&D's own target types. Core does not interpret these names.
     if (targetType === 'self') {
         if (targetToken !== sourceToken) {
             return { valid: false, reason: game.i18n.localize('bg3-hud-core.TargetSelector.SelfOnly') };
@@ -213,18 +214,29 @@ export function isValidTargetType({ sourceToken, targetToken, requirements }) {
         return { valid: true, reason: null };
     }
 
-    // Enemy / other: not self, and hostile disposition when typed as enemy
-    if (targetType === 'enemy' || targetType === 'other') {
-        if (targetToken === sourceToken) {
-            return { valid: false, reason: game.i18n.localize('bg3-hud-core.TargetSelector.CannotTargetSelf') };
+    if (targetType === 'ally') {
+        if (targetToken !== sourceToken && !_isAlly(sourceToken, targetToken)) {
+            return { valid: false, reason: game.i18n.localize('bg3-hud-core.TargetSelector.MustBeAlly') };
         }
-        if (targetType === 'enemy' && !_isEnemy(sourceToken, targetToken)) {
+        return { valid: true, reason: null };
+    }
+
+    if (targetType === 'enemy') {
+        if (targetToken === sourceToken || !_isEnemy(sourceToken, targetToken)) {
             return { valid: false, reason: game.i18n.localize('bg3-hud-core.TargetSelector.MustBeEnemy') };
         }
         return { valid: true, reason: null };
     }
 
-    // Ally / creature / etc. are not enforced here - leave that to the system workflow
+    // Legacy "other": a creature other than the caster.
+    if (targetType === 'other') {
+        if (targetToken === sourceToken) {
+            return { valid: false, reason: game.i18n.localize('bg3-hud-core.TargetSelector.CannotTargetSelf') };
+        }
+        return { valid: true, reason: null };
+    }
+
+    // creature, willing, object, space, creatureOrObject: any token with an actor, including you.
     return { valid: true, reason: null };
 }
 
@@ -454,12 +466,26 @@ function _convertToSceneUnits(value, fromUnits, sceneUnits) {
 // ========== Private Helper Functions ==========
 
 /**
- * Check if target is an enemy of source.
+ * Check if target is an ally of source, including the caster.
  * @param {Token} sourceToken
  * @param {Token} targetToken
  * @returns {boolean}
  * @private
  */
+function _isAlly(sourceToken, targetToken) {
+    if (!sourceToken || !targetToken) return false;
+    if (targetToken === sourceToken) return true;
+
+    const sourceDisp = sourceToken.document.disposition;
+    const targetDisp = targetToken.document.disposition;
+    const HOSTILE = CONST.TOKEN_DISPOSITIONS?.HOSTILE ?? -1;
+    const FRIENDLY = CONST.TOKEN_DISPOSITIONS?.FRIENDLY ?? 1;
+
+    if (sourceDisp === FRIENDLY) return targetDisp === FRIENDLY;
+    if (sourceDisp === HOSTILE) return targetDisp === HOSTILE;
+    return targetDisp === FRIENDLY;
+}
+
 function _isEnemy(sourceToken, targetToken) {
     if (!sourceToken || !targetToken) return false;
 
