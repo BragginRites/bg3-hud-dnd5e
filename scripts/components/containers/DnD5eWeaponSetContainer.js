@@ -7,6 +7,7 @@
  */
 
 import { createLogger } from '/modules/bg3-hud-core/scripts/utils/logger.js';
+import { isTwoHandedWeapon } from '../../features/ItemClassification.js';
 
 const log = createLogger('bg3-hud-dnd5e');
 
@@ -30,26 +31,7 @@ export async function createDnD5eWeaponSetContainer() {
 
             try {
                 const item = await fromUuid(cellData.uuid);
-                if (!item) return false;
-
-                // Check if it's a weapon
-                if (item.type !== 'weapon') return false;
-
-                // Check for two-handed property
-                // D&D 5e v5+: properties is a Set
-                const properties = item.system?.properties;
-                if (properties instanceof Set) {
-                    return properties.has('two');
-                }
-                // Fallback for older versions: properties might be an object/array
-                if (properties && typeof properties === 'object') {
-                    if (Array.isArray(properties)) {
-                        return properties.includes('two');
-                    }
-                    return properties.two === true;
-                }
-
-                return false;
+                return isTwoHandedWeapon(item);
             } catch (error) {
                 log.warn('Error checking two-handed weapon:', error);
                 return false;
@@ -263,6 +245,13 @@ export async function createDnD5eWeaponSetContainer() {
 
         /**
          * Determine if an item should be managed by weapon sets
+         *
+         * NOT merged with ItemClassification.js#isHeldDocument: that shared
+         * predicate also treats consumable wands as "held", which is correct
+         * for weapon-set slot occupancy but wrong here - onSetSwitch() uses
+         * this method to decide which items get system.equipped toggled on
+         * set-switch, and wands should not be auto-equipped/unequipped by a
+         * weapon-set switch.
          * @param {Item} item
          * @returns {boolean}
          * @private

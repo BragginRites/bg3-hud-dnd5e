@@ -1,5 +1,6 @@
 import { AutoPopulateFramework } from '/modules/bg3-hud-core/scripts/features/AutoPopulateFramework.js';
 import { shouldExcludeGenericActionFromHotbarAutoAdd } from '../constants/cprBlockedHotbarActions.js';
+import { getActivitiesArray } from './ItemClassification.js';
 
 const MODULE_ID = 'bg3-hud-dnd5e';
 
@@ -179,25 +180,7 @@ export class DnD5eAutoPopulate extends AutoPopulateFramework {
      * @private
      */
     _getActivities(item) {
-        const activities = item.system?.activities;
-        if (!activities) return [];
-
-        // Handle Map
-        if (activities instanceof Map) {
-            return Array.from(activities.values());
-        }
-
-        // Handle plain object
-        if (typeof activities === 'object' && !Array.isArray(activities)) {
-            return Object.values(activities);
-        }
-
-        // Handle array
-        if (Array.isArray(activities)) {
-            return activities;
-        }
-
-        return [];
+        return getActivitiesArray(item);
     }
 
     /**
@@ -291,18 +274,8 @@ export class DnD5eAutoPopulate extends AutoPopulateFramework {
      * @private
      */
     _hasActivities(item) {
-        const activities = item.system?.activities;
-
         // dnd5e v5+: activities is typically a plain object keyed by id
-        if (activities instanceof Map) {
-            if (activities.size > 0) return true;
-        } else if (activities && typeof activities === 'object') {
-            if (Array.isArray(activities)) {
-                if (activities.length > 0) return true;
-            } else if (Object.keys(activities).length > 0) {
-                return true;
-            }
-        }
+        if (getActivitiesArray(item).length > 0) return true;
 
         // Fallback to legacy activation
         if (item.system?.activation?.type && item.system.activation.type !== 'none') return true;

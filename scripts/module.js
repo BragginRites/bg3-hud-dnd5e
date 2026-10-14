@@ -12,7 +12,7 @@ import { createDnD5eWeaponSetContainer } from './components/containers/DnD5eWeap
 import { DnD5eInfoContainer } from './components/containers/DnD5eInfoContainer.js';
 import { DnD5eAdvContainer } from './components/containers/DnD5eAdvContainer.js';
 import { DnD5eCPRGenericActionsContainer } from './components/containers/DnD5eCPRGenericActionsContainer.js';
-import { isContainer, getContainerContents, saveContainerContents } from './components/containers/DnD5eContainerPopover.js';
+import { isContainer, getContainerContents, saveContainerContents } from './components/containers/ItemContainerContents.js';
 import { DnD5eAutoSort } from './features/DnD5eAutoSort.js';
 import { DnD5eAutoPopulate } from './features/DnD5eAutoPopulate.js';
 import { DnD5eCPRAutoPopulate } from './features/DnD5eCPRAutoPopulate.js';
@@ -26,21 +26,15 @@ import {
 } from './constants/cprBlockedHotbarActions.js';
 import { createLogger } from '/modules/bg3-hud-core/scripts/utils/logger.js';
 import { resolveDnd5eNotice } from './notice/resolveNotice.js';
+import { useItem, useActivity } from './features/ItemUseWorkflow.js';
+import { computeSpellDepletion, resolveHotbarMembershipOnItemUpdate as resolveSpellHotbarMembership } from './features/SpellDepletion.js';
+import { autoPopulatePassives as runAutoPopulatePassives } from './features/PassiveBookkeeping.js';
+import { registerAdvantageHooks } from './features/AdvantageHooks.js';
+import { isHeldDocument, isTwoHandedWeapon } from './features/ItemClassification.js';
 
 const log = createLogger('bg3-hud-dnd5e');
 
 const MODULE_ID = 'bg3-hud-dnd5e';
-const ADVANTAGE_ROLL_EVENTS = [
-    'dnd5e.preRollAttackV2',
-    'dnd5e.preRollSavingThrowV2',
-    'dnd5e.preRollSkillV2',
-    'dnd5e.preRollAbilityCheckV2',
-    'dnd5e.preRollConcentrationV2',
-    'dnd5e.preRollDeathSaveV2',
-    'dnd5e.preRollToolV2'
-];
-
-let advantageHooksRegistered = false;
 
 log.info('Loading adapter');
 
@@ -277,20 +271,24 @@ class DnD5eAdapter {
     isHeldItem(cell) {
         if (!cell || cell.isTwoHandedDuplicate) return false;
         const item = this._documentFromCell(cell);
-        return this._isHeldDocument(item);
+        return isHeldDocument(item);
     }
 
     isTwoHanded(cell) {
         if (!cell || cell.isTwoHandedDuplicate) return false;
         if (cell.two) return true;
         const item = this._documentFromCell(cell);
-        if (!item || item.type !== 'weapon') return false;
-        const properties = item.system?.properties;
-        if (properties instanceof Set) return properties.has('two');
-        if (Array.isArray(properties)) return properties.includes('two');
-        return properties?.two === true;
+        return isTwoHandedWeapon(item);
     }
 
+    /**
+     * Resolve a plain item/document from a weapon-set cell. Cells created
+     * from "ghost" entries (not yet backed by a real item) carry enough
+     * shape (`itemType`/`equipmentType`/`consumableType`/`armorType`) to
+     * synthesize a minimal document; otherwise resolve the real document via
+     * `fromUuidSync` (a Foundry global, hence this stays on the adapter
+     * rather than becoming a pure helper).
+     */
     _documentFromCell(cell) {
         if (cell.itemType) {
             return {
@@ -307,21 +305,6 @@ class DnD5eAdapter {
         } catch {
             return null;
         }
-    }
-
-    _isHeldDocument(item) {
-        if (!item) return false;
-        if (item.type === 'weapon') return true;
-        if (item.type === 'equipment') {
-            const typeValue = item.system?.type?.value || item.system?.type;
-            const armorType = item.system?.armor?.type;
-            return typeValue === 'shield' || armorType === 'shield';
-        }
-        if (item.type === 'consumable') {
-            const t = item.system?.type?.value || item.system?.type;
-            return t === 'wand';
-        }
-        return false;
     }
 
     /**
@@ -410,131 +393,7 @@ class DnD5eAdapter {
      * @private
      */
     async _useItem(uuid, event) {
-        const resolved = await fromUuid(uuid);
-        if (!resolved) {
-            ui.notifications.warn(game.i18n.localize(`${MODULE_ID}.Notifications.ItemNotFound`));
-            return;
-        }
-
-        // Hydration can leave Activity UUIDs tagged as type 'Item'; route correctly.
-        if (resolved.constructor?.metadata?.name === 'Activity') {
-            await this._useActivity(uuid, event);
-            return;
-        }
-
-        // If this is an embedded item (already on the actor), use it directly.
-        // If it's from a compendium, we need to create a real embedded item so midi-qol can find it.
-        const isEmbedded = !!resolved.parent;
-        const actor =
-            resolved.actor ??
-            (resolved.parent?.documentName === 'Actor' ? resolved.parent : null) ??
-            ui.BG3HUD_APP?.currentActor ??
-            canvas?.tokens?.controlled?.[0]?.actor ??
-            null;
-
-        if (!actor) {
-            ui.notifications.warn(game.i18n.localize(`${MODULE_ID}.Notifications.ItemCannotBeUsed`));
-            return;
-        }
-
-        let itemToUse = resolved;
-        let createdItemId = null;
-
-        // For compendium items, we must create a real embedded document (not temporary)
-        // so that midi-qol can find it in the actor's items collection during its workflow.
-        if (!isEmbedded) {
-            // Clone the item data and ensure it's properly migrated
-            const data = foundry.utils.deepClone(resolved.toObject());
-
-            // Ensure modern V13+ stats shape exists to avoid deprecated flags.exportSource access
-            if (!data._stats) {
-                data._stats = {};
-            }
-            if (data.flags?.exportSource && !data._stats.exportSource) {
-                data._stats.exportSource = data.flags.exportSource;
-                delete data.flags.exportSource;
-            }
-
-            // Let Foundry assign the id
-            delete data._id;
-
-            // Create a real embedded document - midi-qol requires the item to be in the collection
-            // We'll delete it after use to avoid cluttering the actor's inventory
-            const created = await actor.createEmbeddedDocuments('Item', [data]);
-            itemToUse = created?.[0] ?? null;
-            createdItemId = itemToUse?.id;
-        }
-
-        if (!itemToUse) {
-            ui.notifications.warn(game.i18n.localize(`${MODULE_ID}.Notifications.ItemNotFound`));
-            return;
-        }
-
-        log.debug('Using item:', itemToUse.name, isEmbedded ? '(embedded)' : '(from compendium)');
-
-        // Check if item needs targeting and target selector is enabled
-        const targetSelectorEnabled = game.settings.get('bg3-hud-core', 'enableTargetSelector');
-        const needsTargeting = targetSelectorEnabled && this.targetingRules?.needsTargeting({ item: itemToUse });
-        let areaPlaced = false;
-
-        if (needsTargeting) {
-            // Get the source token
-            const sourceToken = actor.token?.object ??
-                canvas?.tokens?.placeables?.find(t => t.actor?.id === actor.id) ??
-                null;
-
-            if (sourceToken) {
-                try {
-                    // Start target selection
-                    const targets = await ui.BG3HOTBAR?.api?.startTargetSelection({
-                        token: sourceToken,
-                        item: itemToUse
-                    });
-
-                    if (!targets?.placed && (!targets || targets.length === 0)) {
-                        log.debug('Target selection cancelled');
-                        // Clean up temp item if we created one
-                        if (createdItemId && actor.items.has(createdItemId)) {
-                            await actor.deleteEmbeddedDocuments('Item', [createdItemId]);
-                        }
-                        return;
-                    }
-
-                    log.debug('Targets selected:', targets.map(t => t.name).join(', '));
-                    areaPlaced = targets.placed === true;
-                } catch (error) {
-                    log.error('Target selection error:', error);
-                    // Clean up temp item if we created one
-                    if (createdItemId && actor.items.has(createdItemId)) {
-                        await actor.deleteEmbeddedDocuments('Item', [createdItemId]);
-                    }
-                    return;
-                }
-            }
-        }
-
-        // Use the item (D&D 5e v4+ uses .use() method)
-        if (typeof itemToUse.use === 'function') {
-            try {
-                const config = { event };
-                if (areaPlaced) {
-                    config.create = { measuredTemplate: false };
-                }
-                await itemToUse.use(config);
-            } finally {
-                // Clean up: delete the temporarily created item from the actor's inventory
-                // This runs even if item.use() throws, ensuring we don't leave orphan items
-                if (createdItemId && actor.items.has(createdItemId)) {
-                    await actor.deleteEmbeddedDocuments('Item', [createdItemId]);
-                }
-            }
-        } else {
-            // Clean up if we created an item but can't use it
-            if (createdItemId && actor.items.has(createdItemId)) {
-                await actor.deleteEmbeddedDocuments('Item', [createdItemId]);
-            }
-            ui.notifications.warn(game.i18n.localize(`${MODULE_ID}.Notifications.ItemCannotBeUsed`));
-        }
+        return useItem(this.targetingRules, uuid, event);
     }
 
     /**
@@ -544,55 +403,7 @@ class DnD5eAdapter {
      * @private
      */
     async _useActivity(uuid, event) {
-        const activity = await fromUuid(uuid);
-        if (!activity) {
-            ui.notifications.warn(game.i18n.localize(`${MODULE_ID}.Notifications.ActivityNotFound`));
-            return;
-        }
-
-        log.debug('Using activity:', activity.name);
-
-        const item = activity.item;
-        const actor = item?.actor;
-        const targetSelectorEnabled = game.settings.get('bg3-hud-core', 'enableTargetSelector');
-        const needsTargeting = targetSelectorEnabled
-            && this.targetingRules?.needsTargeting({ item, activity });
-
-        let areaPlaced = false;
-
-        if (needsTargeting && actor) {
-            const sourceToken = actor.token?.object
-                ?? canvas?.tokens?.placeables?.find(t => t.actor?.id === actor.id)
-                ?? null;
-            if (sourceToken) {
-                try {
-                    const targets = await ui.BG3HOTBAR?.api?.startTargetSelection({
-                        token: sourceToken,
-                        item,
-                        activity
-                    });
-                    if (!targets?.placed && (!targets || targets.length === 0)) {
-                        log.debug('Activity target selection cancelled');
-                        return;
-                    }
-                    areaPlaced = targets.placed === true;
-                } catch (error) {
-                    log.error('Activity target selection error:', error);
-                    return;
-                }
-            }
-        }
-
-        // Activities have their own use() method
-        if (typeof activity.use === 'function') {
-            const config = { event };
-            if (areaPlaced) {
-                config.create = { measuredTemplate: false };
-            }
-            await activity.use(config);
-        } else {
-            ui.notifications.warn(game.i18n.localize(`${MODULE_ID}.Notifications.ActivityCannotBeUsed`));
-        }
+        return useActivity(this.targetingRules, uuid, event);
     }
 
     /**
@@ -622,96 +433,7 @@ class DnD5eAdapter {
      * @param {TokenDocument} tokenDocument - The token document (optional)
      */
     async autoPopulatePassives(actor, tokenDocument = null) {
-        if (!actor) return;
-
-        // Check if auto-populate passives is enabled
-        if (!game.settings.get(MODULE_ID, 'autoPopulatePassivesEnabled')) {
-            return;
-        }
-
-        // GUARD: Check if passives are already configured for this actor (token's synthetic actor)
-        // This prevents overwriting user selections when tokens already have passives set
-        const existingPassives = actor.getFlag(MODULE_ID, 'selectedPassives');
-        if (existingPassives && Array.isArray(existingPassives) && existingPassives.length > 0) {
-            log.debug('Passives already configured on token actor, skipping auto-populate');
-            return;
-        }
-
-        // For unlinked tokens, check the BASE actor (from sidebar) for saved configuration
-        // If "Save for all tokens" was checked, the base actor will have:
-        // - 'passivesItemIds' flag with just the item IDs (not full UUIDs)
-        // - 'passivesSaveToBase' flag set to true
-        if (tokenDocument && tokenDocument.actorLink === false) {
-            const baseActorId = tokenDocument.actorId;
-            const baseActor = baseActorId ? game.actors.get(baseActorId) : null;
-
-            log.debug('Checking base actor for unlinked token:', {
-                baseActorId,
-                baseActorFound: !!baseActor,
-                baseActorName: baseActor?.name
-            });
-
-            if (baseActor) {
-                // Check if "Save for all tokens" mode is active on base actor
-                const saveToBaseEnabled = baseActor.getFlag(MODULE_ID, 'passivesSaveToBase');
-                const baseItemIds = baseActor.getFlag(MODULE_ID, 'passivesItemIds');
-
-                log.debug('Base actor flags:', {
-                    saveToBaseEnabled,
-                    baseItemIds: baseItemIds?.length ?? 0
-                });
-
-                if (saveToBaseEnabled && baseItemIds && Array.isArray(baseItemIds) && baseItemIds.length > 0) {
-                    // Translate item IDs to this token's UUIDs
-                    // The token's items will have the same item IDs but different UUID prefixes
-                    const tokenUuids = [];
-                    for (const itemId of baseItemIds) {
-                        const item = actor.items.get(itemId);
-                        if (item) {
-                            tokenUuids.push(item.uuid);
-                        } else {
-                            log.warn(`Item ID ${itemId} not found on token actor`);
-                        }
-                    }
-
-                    if (tokenUuids.length > 0) {
-                        log.debug('Copying passives from base actor to unlinked token:', tokenUuids);
-                        await actor.setFlag(MODULE_ID, 'selectedPassives', tokenUuids);
-                        return;
-                    }
-                }
-            }
-        }
-
-        // Get all feat items
-        const feats = actor.items.filter(item => item.type === 'feat');
-
-        // Filter to only features without activities
-        const passiveFeats = feats.filter(feat => {
-            const activities = feat.system?.activities;
-
-            // Check if activities exist and have content
-            if (activities instanceof Map) {
-                return activities.size === 0;
-            } else if (activities && typeof activities === 'object') {
-                if (Array.isArray(activities)) {
-                    return activities.length === 0;
-                } else {
-                    return Object.keys(activities).length === 0;
-                }
-            }
-
-            // Fallback: check legacy activation
-            if (feat.system?.activation?.type && feat.system.activation.type !== 'none') {
-                return false; // Has activation, not passive
-            }
-
-            return true; // No activities or activation, treat as passive
-        });
-
-        // Save the passive UUIDs to actor flags
-        const passiveUuids = passiveFeats.map(feat => feat.uuid);
-        await actor.setFlag(MODULE_ID, 'selectedPassives', passiveUuids);
+        return runAutoPopulatePassives(actor, tokenDocument);
     }
 
     /**
@@ -824,31 +546,12 @@ class DnD5eAdapter {
      * @returns {'add'|'remove'|null}
      */
     resolveHotbarMembershipOnItemUpdate(item, _actor) {
-        if (!item || item.type !== 'spell') return null;
-
-        const method = item.system?.method ?? item.system?.preparation?.mode ?? '';
-        // Numeric in dnd5e v4+; boolean possible on legacy preparation.prepared
-        const preparedRaw = item.system?.prepared ?? item.system?.preparation?.prepared;
-        const preparedValue = Number(preparedRaw) || 0;
-        const isPrepared = preparedValue > 0;
-
-        // Always-prepared (prepared === 2) or casting methods that ignore the checkbox
-        const alwaysEligible = preparedValue >= 2
-            || ['pact', 'apothecary', 'atwill', 'innate', 'ritual', 'always'].includes(method);
-        if (alwaysEligible) return 'add';
-
-        // Prepared casters: modern method is "spell"; legacy prep mode was "prepared"
-        const isPreparedMethod = method === 'spell' || method === 'prepared';
-        if (isPreparedMethod) {
-            return isPrepared ? 'add' : 'remove';
-        }
-
-        return null;
+        return resolveSpellHotbarMembership(item, _actor);
     }
 
     /**
      * Check if an item is a container (bag, pouch, box, etc.)
-     * Delegates to DnD5eContainerPopover module
+     * Delegates to the ItemContainerContents module
      * @param {Object} cellData - The cell's data object
      * @returns {Promise<boolean>}
      */
@@ -858,18 +561,19 @@ class DnD5eAdapter {
 
     /**
      * Get contents of a container item
-     * Delegates to DnD5eContainerPopover module
+     * Delegates to the ItemContainerContents module, passing this adapter's
+     * own transformItemToCellData as the transform (no global ui.BG3HOTBAR lookup needed).
      * @param {Item} containerItem - The container item
      * @param {Actor} actor - The actor who owns the container
      * @returns {Promise<Object>} Grid data with rows, cols, and items
      */
     async getContainerContents(containerItem, actor) {
-        return await getContainerContents(containerItem, actor);
+        return await getContainerContents(containerItem, actor, this.transformItemToCellData.bind(this));
     }
 
     /**
      * Save contents back to a container item
-     * Delegates to DnD5eContainerPopover module
+     * Delegates to the ItemContainerContents module
      * @param {Item} containerItem - The container item
      * @param {Object} items - Grid items object (slotKey: itemData)
      * @param {Actor} actor - The actor who owns the container
@@ -918,10 +622,7 @@ class DnD5eAdapter {
      * @returns {Object} Display settings object
      */
     getDisplaySettings() {
-        return {
-            showItemNames: game.settings.get(MODULE_ID, 'showItemNames'),
-            showItemUses: game.settings.get(MODULE_ID, 'showItemUses')
-        };
+        return ui.BG3HOTBAR.api.getDisplaySettings(MODULE_ID);
     }
 
     /**
@@ -987,49 +688,21 @@ class DnD5eAdapter {
             const hasOwnUses = !!cellData.uses
                 || ((parseInt(item.system?.uses?.max) || 0) > 0)
                 || ((Number(item.system?.uses?.max) || 0) > 0);
-            const usesSlots = method === 'spell' && !hasOwnUses;
+            const spellSlots = item.actor?.system?.spells ?? null;
 
-            if (level === 0) {
-                // Cantrips never deplete
-                cellData.depleted = false;
-            } else if (!usesSlots) {
-                // Innate / at-will / pact / own-uses spells - ignore spell slots
-                if (cellData.uses) {
-                    cellData.depleted = cellData.uses.value <= 0;
-                } else {
-                    cellData.depleted = false;
-                }
-            } else {
-                // Regular learned spells (method === 'spell') - check spell slots
-                const actor = item.actor;
-                if (actor) {
-                    const spells = actor.system?.spells;
-                    if (spells) {
-                        let canCast = false;
+            const depleted = computeSpellDepletion({
+                level,
+                method,
+                hasOwnUses,
+                uses: cellData.uses ?? null,
+                spellSlots
+            });
 
-                        // Check if any slot at this level or higher has remaining uses
-                        for (let l = level; l <= 9; l++) {
-                            const slot = spells[`spell${l}`];
-                            if (slot?.value > 0) {
-                                canCast = true;
-                                break;
-                            }
-                        }
-
-                        // Also check pact slots - they can cast spells up to their level
-                        if (!canCast && spells.pact?.value > 0 && spells.pact?.level >= level) {
-                            canCast = true;
-                        }
-
-                        // Also check apothecary slots (SCGD compatibility)
-                        if (!canCast && spells.apothecary?.value > 0 && (spells.apothecary?.level ?? 1) >= level) {
-                            canCast = true;
-                        }
-
-                        // Set depleted flag for GridCell to consume
-                        cellData.depleted = !canCast;
-                    }
-                }
+            // Pure function returns undefined when there isn't enough data to
+            // determine slot-based depletion (no actor / no spells block) -
+            // leave cellData.depleted unset in that case, matching prior behavior.
+            if (depleted !== undefined) {
+                cellData.depleted = depleted;
             }
         }
 
@@ -1038,53 +711,8 @@ class DnD5eAdapter {
 
 }
 
-/**
- * Register hook handlers that apply ADV/DIS state to dnd5e rolls
- * Mirrors inspired hotbar behaviour but scoped to BG3 HUD core
- */
-function registerAdvantageHooks() {
-    if (advantageHooksRegistered) return;
-
-    const handleRollAdvantage = async (rollConfig) => {
-        // Ensure midi-qol integration is active and setting enabled
-        if (!game.modules.get('midi-qol')?.active) return;
-        if (!game.settings.get(MODULE_ID, 'addAdvBtnsMidiQoL')) return;
-
-        const workflowActor = rollConfig?.workflow?.actor;
-        if (!workflowActor) return;
-
-        // Only apply when HUD is controlling this actor
-        const currentActor = ui.BG3HUD_APP?.currentActor;
-        if (!currentActor || currentActor !== workflowActor) return;
-
-        const state = workflowActor.getFlag(MODULE_ID, 'advState');
-        const once = workflowActor.getFlag(MODULE_ID, 'advOnce');
-
-        if (state === 'advBtn') {
-            rollConfig.advantage = true;
-        } else if (state === 'disBtn') {
-            rollConfig.disadvantage = true;
-        } else {
-            return;
-        }
-
-        if (once) {
-            const situationalBonuses = ui.BG3HUD_APP?.components?.situationalBonuses;
-            if (situationalBonuses && typeof situationalBonuses.clearState === 'function') {
-                await situationalBonuses.clearState();
-            } else {
-                await workflowActor.unsetFlag(MODULE_ID, 'advState');
-                await workflowActor.unsetFlag(MODULE_ID, 'advOnce');
-            }
-        }
-    };
-
-    for (const event of ADVANTAGE_ROLL_EVENTS) {
-        Hooks.on(event, handleRollAdvantage);
-    }
-
-    advantageHooksRegistered = true;
-}
+// NOTE: Advantage/disadvantage roll hooks live in ./features/AdvantageHooks.js
+// and are registered once via registerAdvantageHooks() from the bg3HudReady handler above.
 
 // NOTE: CPR auto-populate for token creation is now handled via adapter.onTokenCreationComplete()
 // which is called by core AFTER all grids are populated, preventing race conditions with state saving.
@@ -1096,7 +724,7 @@ Hooks.on('BG3HUD_TOKEN_CHANGED', async (token) => {
     if (!token?.actor) return;
 
     // Use adapter's cprAutoPopulate
-    const adapter = ui.BG3HOTBAR?.registry?.activeAdapter;
+    const adapter = ui.BG3HOTBAR?.api?.getActiveAdapter();
     if (adapter?.cprAutoPopulate) {
         await adapter.cprAutoPopulate.onTokenChange(token);
     }

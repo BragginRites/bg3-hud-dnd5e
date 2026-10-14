@@ -1,0 +1,13 @@
+{
+    "name": "bg3-hud-dnd5e",
+    "version": "0.8.0",
+    "private": true,
+    "type": "module",
+    "description": "A D&D 5e integration module for the BG3 Inspired HUD.",
+    "scripts": {
+        "test": "vitest run"
+    },
+    "devDependencies": {
+        "vitest": "^2.1.9"
+    }
+}

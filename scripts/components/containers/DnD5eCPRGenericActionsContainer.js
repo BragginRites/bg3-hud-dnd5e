@@ -7,25 +7,12 @@
 
 import { BG3Component } from '/modules/bg3-hud-core/scripts/components/BG3Component.js';
 import { createLogger } from '/modules/bg3-hud-core/scripts/utils/logger.js';
+import { getCPRGenericActionsUUID } from '../../constants/cprBlockedHotbarActions.js';
+import { ensureCompendiumItemOnActor } from '../../utils/ensureCompendiumItemOnActor.js';
 
 const log = createLogger('bg3-hud-dnd5e');
 
 const MODULE_ID = 'bg3-hud-dnd5e';
-
-// CPR Generic Actions item UUIDs by rules version
-const CPR_GENERIC_ACTIONS_UUIDS = {
-    legacy: 'Compendium.chris-premades.CPRMiscellaneous.Item.V0rdpb8WPmdYhAjc',  // 2014 rules
-    modern: 'Compendium.chris-premades.CPRMiscellaneous.Item.Iz2XtxLReLnXTDiI'   // 2024 rules
-};
-
-/**
- * Get the CPR Generic Actions UUID based on D&D 5e rules version
- * @returns {string} The UUID for the appropriate Generic Actions item
- */
-function getCPRGenericActionsUUID() {
-    const rulesVersion = game.settings.get('dnd5e', 'rulesVersion');
-    return CPR_GENERIC_ACTIONS_UUIDS[rulesVersion] || CPR_GENERIC_ACTIONS_UUIDS.modern;
-}
 
 /**
  * D&D 5e CPR Generic Actions Container
@@ -120,42 +107,17 @@ export class DnD5eCPRGenericActionsContainer extends BG3Component {
      */
     async _onClick(event) {
         try {
-            // Get the expected item name based on rules version
-            const rulesVersion = game.settings.get('dnd5e', 'rulesVersion');
-            const itemName = rulesVersion === 'modern'
-                ? 'Generic Actions (2024)'
-                : 'Generic Actions (2014)';
-
-            // Check if actor already has the item by name
-            let actorItem = this.actor.items.find(i => i.name === itemName);
+            // Resolve (and create on the actor if needed) the Generic Actions
+            // item for the active rules version. CPR items must stay
+            // permanently on the actor for active effects to work with midi-qol.
+            const uuid = getCPRGenericActionsUUID();
+            const actorItem = await ensureCompendiumItemOnActor(this.actor, uuid);
 
             if (!actorItem) {
-                // Item not on actor - create it from compendium
-                const uuid = getCPRGenericActionsUUID();
-                const compendiumItem = await fromUuid(uuid);
-
-                if (!compendiumItem) {
-                    ui.notifications.warn(
-                        game.i18n.localize(`${MODULE_ID}.Notifications.CPRGenericActionsNotFound`)
-                    );
-                    return;
-                }
-
-                // Create the item on the actor - it stays permanently for midi-qol/active effects
-                // Use noBG3AutoAdd to prevent ItemUpdateManager from auto-adding to hotbar
-                const data = foundry.utils.deepClone(compendiumItem.toObject());
-                delete data._id; // Let Foundry assign a new ID
-                const createdItems = await this.actor.createEmbeddedDocuments('Item', [data], { noBG3AutoAdd: true });
-                actorItem = createdItems?.[0];
-
-                if (!actorItem) {
-                    ui.notifications.warn(
-                        game.i18n.localize(`${MODULE_ID}.Notifications.CPRGenericActionsNotFound`)
-                    );
-                    return;
-                }
-
-                log.debug(`Created CPR Generic Actions item on actor: ${actorItem.name}`);
+                ui.notifications.warn(
+                    game.i18n.localize(`${MODULE_ID}.Notifications.CPRGenericActionsNotFound`)
+                );
+                return;
             }
 
             // Use the embedded item (never delete - active effects require persistence)

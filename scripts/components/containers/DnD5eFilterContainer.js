@@ -26,6 +26,14 @@ export class DnD5eFilterContainer extends FilterContainer {
 
     /**
      * Check if actor has legendary actions
+     *
+     * NOT using ItemClassification.js#getActivitiesArray here: unlike the
+     * other activities-normalizing call sites, this one only ever checked
+     * the Map and Array shapes of `system.activities`, silently treating a
+     * plain-object-keyed-by-id shape as "no activities". Routing through the
+     * shared helper (which also handles that plain-object shape via
+     * Object.values) would widen which items count as legendary actions, so
+     * the narrower behavior is kept here intentionally.
      * @returns {boolean} True if actor has legendary actions
      * @private
      */

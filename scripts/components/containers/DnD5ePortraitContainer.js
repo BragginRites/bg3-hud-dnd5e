@@ -741,6 +741,7 @@ export async function createDnD5ePortraitContainer() {
             this.element.appendChild(deathSavesElement);
 
             this._applyPortraitVisibility();
+            this._applyPortraitBorder();
 
             return this.element;
         }

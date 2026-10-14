@@ -5,6 +5,7 @@
 
 import { createLogger } from '/modules/bg3-hud-core/scripts/utils/logger.js';
 import { getCPRConfig } from '../constants/cprBlockedHotbarActions.js';
+import { ensureCompendiumItemOnActor } from '../utils/ensureCompendiumItemOnActor.js';
 import { alreadyOnUseGrids, occupy, parkMapFromState, writeParkMap } from '/modules/bg3-hud-core/scripts/occupancy/occupancy.js';
 
 const log = createLogger('bg3-hud-dnd5e');
@@ -123,32 +124,14 @@ export class DnD5eCPRAutoPopulate {
             // For each compendium UUID, ensure item exists on actor and collect embedded UUIDs
             const embeddedActions = [];
             for (const compendiumUuid of actionUuids) {
-                const compendiumItem = await fromUuid(compendiumUuid);
-                if (!compendiumItem) {
-                    log.warn(`CPR AutoPopulate: Could not resolve ${compendiumUuid}`);
+                const actorItem = await ensureCompendiumItemOnActor(actor, compendiumUuid);
+                if (!actorItem) {
+                    log.warn(`CPR AutoPopulate: Could not resolve or create item for ${compendiumUuid}`);
                     continue;
                 }
 
-                // Check if actor already has this item by name
-                let actorItem = actor.items.find(i => i.name === compendiumItem.name);
-
-                if (!actorItem) {
-                    // Create the item on the actor - it stays permanently for midi-qol/active effects
-                    // Use noBG3AutoAdd to prevent ItemUpdateManager from auto-adding to main hotbar
-                    const data = foundry.utils.deepClone(compendiumItem.toObject());
-                    delete data._id; // Let Foundry assign a new ID
-                    const created = await actor.createEmbeddedDocuments('Item', [data], { noBG3AutoAdd: true });
-                    actorItem = created?.[0];
-
-                    if (actorItem) {
-                        log.debug(`CPR AutoPopulate: Created item ${actorItem.name} on actor`);
-                    }
-                }
-
-                if (actorItem) {
-                    // Store embedded item UUID (Actor.XXXX.Item.YYYY format)
-                    embeddedActions.push({ uuid: actorItem.uuid, name: actorItem.name });
-                }
+                // Store embedded item UUID (Actor.XXXX.Item.YYYY format)
+                embeddedActions.push({ uuid: actorItem.uuid, name: actorItem.name });
             }
 
             if (embeddedActions.length === 0) {

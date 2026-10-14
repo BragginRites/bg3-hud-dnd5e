@@ -27,7 +27,7 @@ function migrateLegacyBlockCPRActionsSetting() {
 }
 
 const openAutoPopulateConfiguration = async () => {
-  const adapter = ui.BG3HOTBAR?.registry?.activeAdapter;
+  const adapter = ui.BG3HOTBAR?.api?.getActiveAdapter();
   if (!adapter || !adapter.autoPopulate) {
     ui.notifications.error(
       game.i18n.localize(`${MODULE_ID}.Notifications.AutoPopulateSystemNotAvailable`),

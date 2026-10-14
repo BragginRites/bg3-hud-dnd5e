@@ -26,9 +26,13 @@ export async function isContainer(cellData) {
  * Get contents of a container item
  * @param {Item} containerItem - The container item
  * @param {Actor} actor - The actor who owns the container
+ * @param {function(Item): Promise<Object>} [transformItemToCellData] - Adapter's
+ *   item-to-cell-data transform (e.g. DnD5eAdapter#transformItemToCellData).
+ *   Passed in by the caller instead of being looked up globally, so this
+ *   module doesn't need to know about the adapter or `ui.BG3HOTBAR`.
  * @returns {Promise<Object>} Grid data with rows, cols, and items
  */
-export async function getContainerContents(containerItem, actor) {
+export async function getContainerContents(containerItem, actor, transformItemToCellData) {
     if (!containerItem) {
         return { rows: 3, cols: 5, items: {} };
     }
@@ -36,11 +40,11 @@ export async function getContainerContents(containerItem, actor) {
     // Get items from the container
     // D&D 5e v5+: containers have a .contents property
     const contents = containerItem.system?.contents || [];
-    
+
     // Transform contents to grid items
     const items = {};
     let index = 0;
-    
+
     for (const content of contents) {
         // Get the actual item from the content reference
         const item = await fromUuid(content.uuid || content);
@@ -51,11 +55,10 @@ export async function getContainerContents(containerItem, actor) {
         const row = Math.floor(index / 5);
         const slotKey = `${col}-${row}`;
 
-        // Transform to cell data using adapter's transformation
-        const adapter = ui.BG3HOTBAR?.registry?.activeAdapter;
+        // Transform to cell data using the caller-provided transform
         let cellData;
-        if (adapter && typeof adapter.transformItemToCellData === 'function') {
-            cellData = await adapter.transformItemToCellData(item);
+        if (typeof transformItemToCellData === 'function') {
+            cellData = await transformItemToCellData(item);
         } else {
             // Fallback: manual transformation
             cellData = {
@@ -95,7 +98,7 @@ export async function getContainerContents(containerItem, actor) {
  */
 export async function saveContainerContents(containerItem, items, actor) {
     if (!containerItem) {
-        log.warn('DnD5eContainerPopover | No container item provided for save');
+        log.warn('ItemContainerContents | No container item provided for save');
         return;
     }
 

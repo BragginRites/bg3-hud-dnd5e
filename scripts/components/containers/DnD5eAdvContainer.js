@@ -1,4 +1,5 @@
 import { BG3Component } from '/modules/bg3-hud-core/scripts/components/BG3Component.js';
+import { getAdvantageState, setAdvantageState, clearAdvantageState, isMidiQolIntegrationActive } from '../../features/AdvantageState.js';
 
 const MODULE_ID = 'bg3-hud-dnd5e';
 
@@ -11,15 +12,6 @@ export class DnD5eAdvContainer extends BG3Component {
         super(options);
         this.actor = options.actor || null;
         this.token = options.token || null;
-    }
-
-    /**
-     * Whether ADV/DIS state should apply to midi-qol rolls
-     * @returns {boolean}
-     */
-    _midiIntegrationActive() {
-        return game.modules.get('midi-qol')?.active
-            && game.settings.get(MODULE_ID, 'addAdvBtnsMidiQoL');
     }
 
     /**
@@ -103,7 +95,7 @@ export class DnD5eAdvContainer extends BG3Component {
         }
 
         this.element.style.display = 'flex';
-        this.element.dataset.midiIntegration = String(this._midiIntegrationActive());
+        this.element.dataset.midiIntegration = String(isMidiQolIntegrationActive());
 
         // Create buttons
         const buttons = this.btnData.map((btn) => this._createButton(btn));
@@ -177,18 +169,16 @@ export class DnD5eAdvContainer extends BG3Component {
         const once = event?.button === 2 ? false : true;
         const key = event?.target?.closest('[data-key]')?.dataset.key;
 
-        if (event === null || 
-            (this.actor.getFlag(MODULE_ID, "advOnce") === once && 
-             this.actor.getFlag(MODULE_ID, "advState") === key)) {
+        const current = getAdvantageState(this.actor);
+        if (event === null ||
+            (current.once === once && current.state === key)) {
             // Clear state if clicking the same button with same mode
-            await this.actor.unsetFlag(MODULE_ID, "advState");
-            await this.actor.unsetFlag(MODULE_ID, "advOnce");
+            await clearAdvantageState(this.actor);
         } else {
             // Set new state
-            await this.actor.setFlag(MODULE_ID, "advOnce", once);
-            await this.actor.setFlag(MODULE_ID, "advState", key);
+            await setAdvantageState(this.actor, key, once);
         }
-        
+
         this.updateButtons();
     }
 
@@ -219,8 +209,7 @@ export class DnD5eAdvContainer extends BG3Component {
     updateButtons() {
         if (!this.actor || !this.element) return;
 
-        const state = this.actor.getFlag(MODULE_ID, "advState");
-        const once = this.actor.getFlag(MODULE_ID, "advOnce");
+        const { state, once } = getAdvantageState(this.actor);
 
         if (state !== undefined) {
             this.element.dataset.state = state;
