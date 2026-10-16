@@ -1,20 +1,12 @@
+// Relative, not the usual `/modules/bg3-hud-core/...` form: this file is
+// Foundry-free and unit-tested directly under `node --test`, and that
+// absolute form only resolves inside a live Foundry runtime.
+import { hasOwn, itemList } from '../../../bg3-hud-core/scripts/notice/resolveNotice.js';
+
 const MODULE_ID = 'bg3-hud-dnd5e';
 
 function adapterFlags(changes) {
     return changes?.flags?.[MODULE_ID] || null;
-}
-
-function hasOwn(obj, key) {
-    return !!obj && Object.prototype.hasOwnProperty.call(obj, key);
-}
-
-function itemList(actor) {
-    const items = actor?.items;
-    if (!items) return [];
-    if (typeof items.filter === 'function') return items.filter((item) => item);
-    if (Array.isArray(items)) return items;
-    if (Array.isArray(items.contents)) return items.contents;
-    return [];
 }
 
 /**

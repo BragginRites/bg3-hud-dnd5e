@@ -77,7 +77,12 @@ jobs:
           zip -r bg3-hud-dnd5e.zip . \
             -x "*.git*" \
                ".github*" \
-               "*.vscode*"
+               "*.vscode*" \
+               "node_modules/*" \
+               "package.json" \
+               "package-lock.json" \
+               "vitest.config.js" \
+               "*.test.js"
 
       - name: Create GitHub Release
         if: steps.tag.outputs.exists != 'true'

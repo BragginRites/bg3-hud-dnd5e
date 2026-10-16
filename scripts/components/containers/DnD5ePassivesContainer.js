@@ -1,4 +1,5 @@
 import { createLogger } from '/modules/bg3-hud-core/scripts/utils/logger.js';
+import { getActivitiesArray } from '../../features/ItemClassification.js';
 
 // Import showSelectionDialog from core utilities
 const { showSelectionDialog } = await import('/modules/bg3-hud-core/scripts/utils/dialogs.js');
@@ -32,17 +33,9 @@ export async function createDnD5ePassivesContainer() {
             return this.actor.items.filter(item => {
                 if (item.type !== 'feat') return false;
 
-                const activities = item.system?.activities;
-
                 // Check if activities exist and have content
-                if (activities instanceof Map) {
-                    return activities.size === 0;
-                } else if (activities && typeof activities === 'object') {
-                    if (Array.isArray(activities)) {
-                        return activities.length === 0;
-                    } else {
-                        return Object.keys(activities).length === 0;
-                    }
+                if (item.system?.activities) {
+                    return getActivitiesArray(item).length === 0;
                 }
 
                 // Fallback: check legacy activation

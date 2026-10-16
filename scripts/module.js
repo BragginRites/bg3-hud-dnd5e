@@ -30,7 +30,7 @@ import { useItem, useActivity } from './features/ItemUseWorkflow.js';
 import { computeSpellDepletion, resolveHotbarMembershipOnItemUpdate as resolveSpellHotbarMembership } from './features/SpellDepletion.js';
 import { autoPopulatePassives as runAutoPopulatePassives } from './features/PassiveBookkeeping.js';
 import { registerAdvantageHooks } from './features/AdvantageHooks.js';
-import { isHeldDocument, isTwoHandedWeapon } from './features/ItemClassification.js';
+import { isHeldDocument, isTwoHandedWeapon, getActivitiesArray } from './features/ItemClassification.js';
 
 const log = createLogger('bg3-hud-dnd5e');
 
@@ -134,7 +134,7 @@ Hooks.on('bg3HudReady', async (BG3HUD_API) => {
 
         const inspirationChanged = changes?.system?.attributes?.inspiration !== undefined;
         if (inspirationChanged) {
-            const advContainer = hotbarApp.components?.situationalBonuses;
+            const advContainer = hotbarApp.getRegisteredContainer('situationalBonuses');
             if (advContainer && typeof advContainer.updateButtons === 'function') {
                 advContainer.updateButtons();
             }
@@ -501,8 +501,8 @@ class DnD5eAdapter {
         await persistenceManager.saveState(state);
 
         const hotbarApp = ui.BG3HUD_APP;
-        if (hotbarApp?.rendered && hotbarApp?.components?.hotbar?.gridContainers) {
-            for (const gridContainer of hotbarApp.components.hotbar.gridContainers) {
+        if (hotbarApp?.rendered && hotbarApp?.getHotbarContainer()?.gridContainers) {
+            for (const gridContainer of hotbarApp.getHotbarContainer().gridContainers) {
                 const gridIndex = gridContainer.containerIndex;
                 const gridData = state.hotbar.grids[gridIndex];
                 if (gridData) {
@@ -525,10 +525,7 @@ class DnD5eAdapter {
             return false;
         }
 
-        const activities = item.system?.activities;
-        const hasActivities = (activities instanceof Map && activities.size > 0)
-            || (activities && typeof activities === 'object' && !Array.isArray(activities) && Object.keys(activities).length > 0)
-            || (Array.isArray(activities) && activities.length > 0)
+        const hasActivities = getActivitiesArray(item).length > 0
             || (item.system?.activation?.type && item.system.activation.type !== 'none');
 
         return hasActivities;

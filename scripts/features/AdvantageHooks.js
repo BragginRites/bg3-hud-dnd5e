@@ -40,7 +40,7 @@ export function registerAdvantageHooks() {
         if (!applyHudAdvantage(rollConfig, state)) return;
 
         if (once) {
-            const situationalBonuses = ui.BG3HUD_APP?.components?.situationalBonuses;
+            const situationalBonuses = ui.BG3HOTBAR?.api?.getRegisteredContainer('situationalBonuses');
             if (situationalBonuses && typeof situationalBonuses.clearState === 'function') {
                 await situationalBonuses.clearState();
             } else {

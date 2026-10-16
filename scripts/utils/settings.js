@@ -343,7 +343,7 @@ export function registerSettings() {
     config: false,
     type: Boolean,
     default: false,
-    onChange: () => ui.BG3HUD_APP?.components?.situationalBonuses?.render?.()
+    onChange: () => ui.BG3HOTBAR?.api?.getRegisteredContainer('situationalBonuses')?.render?.()
   });
 
   // Midi-QoL bonus/reaction filter sync
@@ -354,7 +354,7 @@ export function registerSettings() {
     config: false,
     type: Boolean,
     default: true,
-    onChange: () => ui.BG3HUD_APP?.components?.filters?.syncUsedActionFilters?.()
+    onChange: () => ui.BG3HOTBAR?.api?.getFilterContainer()?.syncUsedActionFilters?.()
   });
 
   // Auto-populate on token creation setting

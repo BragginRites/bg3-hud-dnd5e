@@ -1,4 +1,4 @@
-import { AutoSortFramework } from '/modules/bg3-hud-core/scripts/features/AutoSortFramework.js';
+import { AutoSortFramework, compareByTypeThenKey } from '/modules/bg3-hud-core/scripts/features/AutoSortFramework.js';
 import { createLogger } from '/modules/bg3-hud-core/scripts/utils/logger.js';
 
 const log = createLogger('bg3-hud-dnd5e');
@@ -57,47 +57,17 @@ export class DnD5eAutoSort extends AutoSortFramework {
     async sortItems(items) {
         // Define D&D 5e item type order (first to last)
         const typeOrder = ['weapon', 'feat', 'equipment', 'spell', 'consumable', 'tool', 'loot'];
-        
-        items.sort((a, b) => {
-            // First, sort by item type according to our defined order
-            const typeIndexA = typeOrder.indexOf(a.type);
-            const typeIndexB = typeOrder.indexOf(b.type);
-            
-            // Handle different type priorities
-            if (typeIndexA !== typeIndexB) {
-                if (typeIndexA === -1) return 1;  // Unknown types go to the end
-                if (typeIndexB === -1) return -1;
-                return typeIndexA - typeIndexB;
-            }
-            
-            // Then apply D&D 5e type-specific sorting
-            switch (a.type) {
-                case 'spell':
-                    // Sort by spell level first (cantrips = 0, then 1-9)
-                    const levelA = a.sortData?.spellLevel ?? 99;
-                    const levelB = b.sortData?.spellLevel ?? 99;
-                    if (levelA !== levelB) {
-                        return levelA - levelB;
-                    }
-                    // If same level, sort alphabetically
-                    return (a.name || a.sortData?.name || '').localeCompare(b.name || b.sortData?.name || '');
 
-                case 'feat':
-                    // Sort by feature type first
-                    const typeA = a.sortData?.featureType || '';
-                    const typeB = b.sortData?.featureType || '';
-                    const typeCompare = typeA.localeCompare(typeB);
-                    if (typeCompare !== 0) {
-                        return typeCompare;
-                    }
-                    // If same type, sort alphabetically
-                    return (a.name || a.sortData?.name || '').localeCompare(b.name || b.sortData?.name || '');
+        // Secondary tie-break within a type: spells by level (cantrips = 0, then 1-9),
+        // feats by feature type. Every other type falls straight through to name.
+        const secondaryKeyFns = {
+            spell: (item) => item.sortData?.spellLevel ?? 99,
+            feat: (item) => item.sortData?.featureType || ''
+        };
 
-                default:
-                    // All other items sort alphabetically within their type
-                    return (a.name || a.sortData?.name || '').localeCompare(b.name || b.sortData?.name || '');
-            }
-        });
+        items.sort(compareByTypeThenKey(typeOrder, secondaryKeyFns, {
+            getName: (item) => item.name || item.sortData?.name || ''
+        }));
     }
 }
 
