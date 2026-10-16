@@ -5,6 +5,55 @@
  */
 
 /**
+ * Area keys this adapter already understands when the system config is absent.
+ * dnd5e 6 adds `ring` and changes the canvas shape for `radius` to `emanation`.
+ * That canvas shape comes from `areaTargetTypes`, not from a version check.
+ */
+const FALLBACK_AREA_TYPES = new Set([
+    'circle', 'cone', 'cube', 'cylinder', 'line', 'radius', 'ring', 'sphere', 'square', 'wall'
+]);
+
+/**
+ * Canvas template name for an area key, from dnd5e's `areaTargetTypes` table.
+ * dnd5e 5 maps `radius` to `circle`. dnd5e 6 maps it to `emanation`.
+ * @param {string} areaKey
+ * @param {Record<string, {template?: string}>|null|undefined} areaTargetTypes
+ * @returns {string|null}
+ */
+export function canvasTemplateFor(areaKey, areaTargetTypes) {
+    const canvas = areaTargetTypes?.[areaKey]?.template;
+    return typeof canvas === 'string' && canvas ? canvas : null;
+}
+
+/**
+ * @param {string} areaKey
+ * @param {Record<string, {template?: string}>|null|undefined} [areaTargetTypes]
+ * @returns {boolean}
+ */
+export function isKnownAreaType(areaKey, areaTargetTypes) {
+    if (!areaKey) return false;
+    if (canvasTemplateFor(areaKey, areaTargetTypes)) return true;
+    return FALLBACK_AREA_TYPES.has(areaKey);
+}
+
+/**
+ * Copy a dnd5e template and attach the canvas shape Core uses for placement.
+ * The area key stays on `type` so Core can still tell a cube from a sphere.
+ * @param {{type?: string}|null|undefined} template
+ * @param {Record<string, {template?: string}>|null|undefined} [areaTargetTypes]
+ * @returns {object|null}
+ */
+export function resolveActivityTemplate(template, areaTargetTypes) {
+    if (!template?.type || !isKnownAreaType(template.type, areaTargetTypes)) return null;
+    const canvas = canvasTemplateFor(template.type, areaTargetTypes);
+    return canvas ? { ...template, canvas } : { ...template };
+}
+
+function readAreaTargetTypes() {
+    return globalThis.CONFIG?.DND5E?.areaTargetTypes ?? null;
+}
+
+/**
  * Check if an item/activity requires targeting.
  * @param {Object} params
  * @param {Item} params.item - The Foundry item document
@@ -112,22 +161,17 @@ function _activityNeedsTargeting(act) {
  * @private  
  */
 function _isAOETemplateSpell(item) {
+    const areaTargetTypes = readAreaTargetTypes();
     // Check primary target configuration for AOE template
-    if (item.system?.target?.template) {
-        const templateType = item.system.target.template.type;
-        if (['cone', 'cube', 'cylinder', 'line', 'radius', 'sphere'].includes(templateType)) {
-            return true;
-        }
+    if (isKnownAreaType(item.system?.target?.template?.type, areaTargetTypes)) {
+        return true;
     }
 
     // Check activities for AOE template (Foundry v12+)
-    if (item.system?.activities) {
+    if (item.system?.activities?.values) {
         for (const activity of item.system.activities.values()) {
-            if (activity.target?.template) {
-                const templateType = activity.target.template.type;
-                if (['cone', 'cube', 'cylinder', 'line', 'radius', 'sphere'].includes(templateType)) {
-                    return true;
-                }
+            if (isKnownAreaType(activity.target?.template?.type, areaTargetTypes)) {
+                return true;
             }
         }
     }
@@ -172,10 +216,11 @@ export function getTargetRequirements({ item, activity = null }) {
             requirements.maxTargets = Infinity;
         }
 
-        // Template
-        if (targetConfig.template?.type) {
+        // Template. `canvas` is the Foundry shape (`circle`, `emanation`, `ring`).
+        const resolvedTemplate = resolveActivityTemplate(targetConfig.template, readAreaTargetTypes());
+        if (resolvedTemplate) {
             requirements.hasTemplate = true;
-            requirements.template = { ...targetConfig.template };
+            requirements.template = resolvedTemplate;
         }
     }
 

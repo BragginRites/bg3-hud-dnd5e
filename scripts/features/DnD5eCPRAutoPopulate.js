@@ -5,6 +5,7 @@
 
 import { createLogger } from '/modules/bg3-hud-core/scripts/utils/logger.js';
 import { getCPRConfig } from '../constants/cprBlockedHotbarActions.js';
+import { readThirdPartyAutomationUnsupported } from '../utils/thirdPartyCompat.js';
 import { ensureCompendiumItemOnActor } from '../utils/ensureCompendiumItemOnActor.js';
 import { alreadyOnUseGrids, occupy, parkMapFromState, writeParkMap } from '/modules/bg3-hud-core/scripts/occupancy/occupancy.js';
 
@@ -30,6 +31,7 @@ export class DnD5eCPRAutoPopulate {
      * @returns {boolean}
      */
     isCPRActive() {
+        if (readThirdPartyAutomationUnsupported()) return false;
         return game.modules.get('chris-premades')?.active ?? false;
     }
 

@@ -1,3 +1,5 @@
+import { readThirdPartyAutomationUnsupported } from '../utils/thirdPartyCompat.js';
+
 /**
  * Generic action names excluded from main hotbar auto-populate by default.
  * Derived items (e.g. "Grapple: Escape") are allowed — match exact names only.
@@ -74,7 +76,8 @@ const MODULE_ID = 'bg3-hud-dnd5e';
  */
 export function shouldExcludeGenericActionFromHotbarAutoAdd(doc) {
     if (!doc) return false;
-    if (game.settings.get(MODULE_ID, 'allowCPRActionsInAutoPopulate')) return false;
+    if (!readThirdPartyAutomationUnsupported()
+        && game.settings.get(MODULE_ID, 'allowCPRActionsInAutoPopulate')) return false;
     return isExcludedCPRAutoPopulateDocument(doc);
 }
 

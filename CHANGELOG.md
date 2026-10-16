@@ -1,8 +1,12 @@
-## [0.8.0] - 2026-10-14
+## [0.8.0] - 2026-10-16
 
 Requires **bg3-hud-core 0.8.0**.
 
 ### Changed
+- **D&D 5 and D&D 6**: This update loads on both. Foundry 13 with D&D 5 is unchanged. D&D 6 needs Foundry 14.
+- **Area spells**: On D&D 6, an emanation stays on the caster, and a ring hits the band rather than the middle. On D&D 5, those blasts still place where you click.
+- **Midi-QoL and CPR**: On Foundry 14, and on D&D 6, CPR and the Midi bonus/reaction filter stay greyed out. Saved choices are kept.
+- **Advantage and disadvantage**: On D&D 5, including Foundry 14, the buttons still apply to the next roll when Midi-QoL is on. A skill, save, or attack uses the actor who is rolling, not only a Midi workflow. On D&D 6 that setting stays off.
 - **Internal only**: Switched to `BG3HUD_API.getActiveAdapter()` for reading the active adapter, matching core's closure of the `ui.BG3HOTBAR.registry` seam. No player-facing change.
 
 ## [0.7.1] - 2026-10-05

@@ -6,6 +6,7 @@
  */
 
 import { getAdvantageState, clearAdvantageState, isMidiQolIntegrationActive } from './AdvantageState.js';
+import { advantageRollActor, applyHudAdvantage, sameActor } from './advantageRoll.js';
 
 const ADVANTAGE_ROLL_EVENTS = [
     'dnd5e.preRollAttackV2',
@@ -30,29 +31,20 @@ export function registerAdvantageHooks() {
         // Ensure midi-qol integration is active and setting enabled
         if (!isMidiQolIntegrationActive()) return;
 
-        const workflowActor = rollConfig?.workflow?.actor;
-        if (!workflowActor) return;
-
-        // Only apply when HUD is controlling this actor
+        const rollingActor = advantageRollActor(rollConfig);
         const currentActor = ui.BG3HUD_APP?.currentActor;
-        if (!currentActor || currentActor !== workflowActor) return;
+        if (!sameActor(currentActor, rollingActor)) return;
 
-        const { state, once } = getAdvantageState(workflowActor);
-
-        if (state === 'advBtn') {
-            rollConfig.advantage = true;
-        } else if (state === 'disBtn') {
-            rollConfig.disadvantage = true;
-        } else {
-            return;
-        }
+        // Flags are written on the actor the HUD is showing.
+        const { state, once } = getAdvantageState(currentActor);
+        if (!applyHudAdvantage(rollConfig, state)) return;
 
         if (once) {
             const situationalBonuses = ui.BG3HUD_APP?.components?.situationalBonuses;
             if (situationalBonuses && typeof situationalBonuses.clearState === 'function') {
                 await situationalBonuses.clearState();
             } else {
-                await clearAdvantageState(workflowActor);
+                await clearAdvantageState(currentActor);
             }
         }
     };

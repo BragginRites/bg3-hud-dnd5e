@@ -77,7 +77,8 @@
         },
         "Midi": {
           "Legend": "Midi-QoL"
-        }
+        },
+        "UnavailableHint": "Indisponível no Foundry 14 e no D&D 5e 6. A integração deste HUD com Midi-QoL e CPR ainda não foi atualizada para essas versões."
       }
     },
     "AutoPopulate": {

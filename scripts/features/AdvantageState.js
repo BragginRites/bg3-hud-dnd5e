@@ -5,6 +5,8 @@
  * re-derive the flag names independently.
  */
 
+import { readDnd5eAtLeast } from '../utils/thirdPartyCompat.js';
+
 const MODULE_ID = 'bg3-hud-dnd5e';
 
 /**
@@ -62,6 +64,8 @@ export async function clearAdvantageState(actor) {
  * @returns {boolean|undefined}
  */
 export function isMidiQolIntegrationActive() {
+    // dnd5e 5 keeps this path, including on Foundry 14. dnd5e 6 does not.
+    if (readDnd5eAtLeast(6)) return false;
     return game.modules.get('midi-qol')?.active
         && game.settings.get(MODULE_ID, 'addAdvBtnsMidiQoL');
 }

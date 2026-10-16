@@ -8,6 +8,7 @@
 import { BG3Component } from '/modules/bg3-hud-core/scripts/components/BG3Component.js';
 import { createLogger } from '/modules/bg3-hud-core/scripts/utils/logger.js';
 import { getCPRGenericActionsUUID } from '../../constants/cprBlockedHotbarActions.js';
+import { readThirdPartyAutomationUnsupported } from '../../utils/thirdPartyCompat.js';
 import { ensureCompendiumItemOnActor } from '../../utils/ensureCompendiumItemOnActor.js';
 
 const log = createLogger('bg3-hud-dnd5e');
@@ -35,6 +36,10 @@ export class DnD5eCPRGenericActionsContainer extends BG3Component {
      * @returns {boolean}
      */
     get visible() {
+        if (readThirdPartyAutomationUnsupported()) {
+            return false;
+        }
+
         // Check if CPR module is active
         if (!game.modules.get('chris-premades')?.active) {
             return false;

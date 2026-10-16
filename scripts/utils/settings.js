@@ -1,5 +1,6 @@
 import { createSettingsSubmenu } from '/modules/bg3-hud-core/scripts/api/SettingsSubmenu.js';
 import { getCPRConfig } from '../constants/cprBlockedHotbarActions.js';
+import { readDnd5eAtLeast, readThirdPartyAutomationUnsupported } from './thirdPartyCompat.js';
 
 const MODULE_ID = 'bg3-hud-dnd5e';
 
@@ -73,6 +74,11 @@ const openAutoPopulateConfiguration = async () => {
 };
 
 const openCPRActionsSelection = async () => {
+  if (readThirdPartyAutomationUnsupported()) {
+    ui.notifications.warn(game.i18n.localize(`${MODULE_ID}.Settings.ThirdParty.UnavailableHint`));
+    return;
+  }
+
   // Check if CPR module is active
   if (!game.modules.get('chris-premades')?.active) {
     ui.notifications.warn(
@@ -457,9 +463,16 @@ export function registerSettings() {
   if (hasCPR || hasMidiQoL) {
     // Build sections dynamically based on installed modules
     const thirdPartySections = [];
+    const automationUnsupported = readThirdPartyAutomationUnsupported()
+      ? {
+          disabled: true,
+          disabledHint: `${MODULE_ID}.Settings.ThirdParty.UnavailableHint`
+        }
+      : {};
 
     if (hasCPR) {
       thirdPartySections.push({
+        ...automationUnsupported,
         legend: `${MODULE_ID}.Settings.ThirdParty.CPR.Legend`,
         keys: ['enableCPRGenericActions', 'enableCPRActionsAutoPopulate', 'allowCPRActionsInAutoPopulate'],
         buttons: [
@@ -476,9 +489,14 @@ export function registerSettings() {
     }
 
     if (hasMidiQoL) {
+      const midiDisabledKeys = [];
+      if (automationUnsupported.disabled) midiDisabledKeys.push('syncBonusReactionFilters');
+      if (readDnd5eAtLeast(6)) midiDisabledKeys.push('addAdvBtnsMidiQoL');
       thirdPartySections.push({
         legend: `${MODULE_ID}.Settings.ThirdParty.Midi.Legend`,
-        keys: ['addAdvBtnsMidiQoL', 'syncBonusReactionFilters']
+        keys: ['addAdvBtnsMidiQoL', 'syncBonusReactionFilters'],
+        disabledKeys: midiDisabledKeys,
+        disabledHint: midiDisabledKeys.length ? `${MODULE_ID}.Settings.ThirdParty.UnavailableHint` : undefined
       });
     }
 

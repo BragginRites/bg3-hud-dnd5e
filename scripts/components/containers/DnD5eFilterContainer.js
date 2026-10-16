@@ -1,5 +1,6 @@
 import { FilterContainer } from '/modules/bg3-hud-core/scripts/components/containers/FilterContainer.js';
 import { normalizeApothecarySlots } from '../../compatibility/scgd-apothecary.js';
+import { readThirdPartyAutomationUnsupported } from '../../utils/thirdPartyCompat.js';
 
 const MODULE_ID = 'bg3-hud-dnd5e';
 
@@ -270,6 +271,7 @@ export class DnD5eFilterContainer extends FilterContainer {
      * @param {ActiveEffect} [effect] - Optional effect that triggered the sync
      */
     syncUsedActionFilters(effect) {
+        if (readThirdPartyAutomationUnsupported()) return;
         if (!game.modules.get('midi-qol')?.active) return;
         if (!game.settings.get(MODULE_ID, 'syncBonusReactionFilters')) return;
         if (!this.actor) return;
