@@ -1,3 +1,10 @@
+## [0.8.1] - 2026-10-19
+
+Requires **bg3-hud-core 0.8.1**.
+
+### Changed
+- **Internal cleanup**: Lined up with bg3-hud-core's latest internal cleanup pass and added more automated tests. Passives, item sorting, CPR actions, and weapon sets all work exactly as before.
+
 ## [0.8.0] - 2026-10-16
 
 Requires **bg3-hud-core 0.8.0**.
@@ -8,7 +15,6 @@ Requires **bg3-hud-core 0.8.0**.
 - **Midi-QoL and CPR**: On Foundry 14, and on D&D 6, CPR and the Midi bonus/reaction filter stay greyed out. Saved choices are kept.
 - **Advantage and disadvantage**: On D&D 5, including Foundry 14, the buttons still apply to the next roll when Midi-QoL is on. A skill, save, or attack uses the actor who is rolling, not only a Midi workflow. On D&D 6 that setting stays off.
 - **Internal only**: Switched to `BG3HUD_API.getActiveAdapter()` for reading the active adapter, matching core's closure of the `ui.BG3HOTBAR.registry` seam. No player-facing change.
-- **Internal cleanup**: Lined up with bg3-hud-core's latest internal cleanup pass and added more automated tests. Passives, item sorting, CPR actions, and weapon sets all work exactly as before.
 
 ## [0.7.1] - 2026-10-05
 
